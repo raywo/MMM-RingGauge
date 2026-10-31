@@ -66,6 +66,15 @@ class FakeElement {
 		this.children.push(child);
 	}
 
+	insertBefore(child, reference) {
+		const index = this.children.indexOf(reference);
+		this.children.splice(index === -1 ? this.children.length : index, 0, child);
+	}
+
+	removeChild(child) {
+		this.children.splice(this.children.indexOf(child), 1);
+	}
+
 	append(...children) {
 		this.children.push(...children);
 	}
@@ -84,15 +93,21 @@ class FakeElement {
 	}
 }
 
-// The reading config the tests use unless they pass their own mapping.
-const BY_PATHS = {notification: "TEST_READING", match: {id: "x"}, fields: {value: "value"}};
+// The mapping the tests use unless they pass their own.
+const READING = {notification: "TEST_READING", match: {id: "x"}, fields: {value: "value"}};
+// The mapping with a scale, for tests of a reading without a preset.
+const BY_PATHS = {...READING, min: 0, max: 100};
 
 /**
  * Starts one instance in the browser side with the module's defaults and
  * the given config, on a clock the test moves with `advance()`; returns
- * it, every message it logged and the clock.
+ * it, every message it logged and the clock. `mirror` holds the global
+ * config.js options `units` and `language`; without `language`, texts
+ * show as their translation keys.
  */
-function startInstance(instanceConfig) {
+function startInstance(instanceConfig, mirror = {}) {
+	const {language, ...globals} = mirror;
+	const translations = language === undefined ? {} : JSON.parse(read(`translations/${language}.json`));
 	const logged = [];
 	const record = (level) => (message) => logged.push({level, message});
 	const clock = {now: Date.UTC(2026, 0, 15, 12, 0, 0), timers: new Map(), nextId: 1};
@@ -103,7 +118,7 @@ function startInstance(instanceConfig) {
 			}
 		},
 		Log: {error: record("error"), warn: record("warn"), info: record("info"), log: record("log")},
-		config: {locale: "en"},
+		config: {locale: "en", units: "metric", ...globals},
 		Date: {now: () => clock.now},
 		document: {
 			createElement: (name) => new FakeElement(name),
@@ -121,13 +136,15 @@ function startInstance(instanceConfig) {
 	});
 	vm.runInContext(read("gauge-logic.js"), context, {filename: "gauge-logic.js"});
 	vm.runInContext(read("source-mapping.js"), context, {filename: "source-mapping.js"});
+	vm.runInContext(read("presets.js"), context, {filename: "presets.js"});
 	vm.runInContext(read(`${MODULE_NAME}.js`), context, {filename: `${MODULE_NAME}.js`});
 	const {definition} = context;
 	const instance = Object.assign(Object.create(definition), {
 		name: MODULE_NAME,
 		identifier: "module_0_MMM-RingGauge",
 		config: {...definition.defaults, ...instanceConfig},
-		translate: (key) => key
+		// MagicMirror² returns the key itself for a key without a text.
+		translate: (key) => translations[key] ?? key
 	});
 	instance.start();
 	instance.getDom();
@@ -177,7 +194,7 @@ describe(MODULE_NAME, () => {
 		const definition = loadModule()[MODULE_NAME];
 		const scripts = definition.getScripts.call({file: (name) => name});
 		// Copied: an array from the vm context has another prototype.
-		assert.deepEqual([...scripts], ["gauge-logic.js", "source-mapping.js"]);
+		assert.deepEqual([...scripts], ["gauge-logic.js", "source-mapping.js", "presets.js"]);
 		for (const script of scripts) {
 			assert.ok(fs.existsSync(path.join(REPO_ROOT, script)));
 		}
@@ -304,7 +321,7 @@ describe(MODULE_NAME, () => {
 	});
 
 	it("names no source in its code or defaults", () => {
-		for (const file of [`${MODULE_NAME}.js`, "source-mapping.js", "gauge-logic.js"]) {
+		for (const file of [`${MODULE_NAME}.js`, "source-mapping.js", "gauge-logic.js", "presets.js"]) {
 			assert.doesNotMatch(read(file), /home.?assistant|HOME_ASSISTANT|entity_id|sensor\./i, file);
 		}
 		const {defaults} = loadModule()[MODULE_NAME];
@@ -355,6 +372,8 @@ describe(MODULE_NAME, () => {
 			const {instance, logged} = startInstance({
 				notification: "TEST_READING",
 				label: "CO₂",
+				min: 0,
+				max: 100,
 				bands: [{to: 100, level: "good", text: "Gut"}],
 				transform: (payload) => {
 					if (payload.value === "bad") {
@@ -378,7 +397,7 @@ describe(MODULE_NAME, () => {
 		});
 
 		it("logs missing required options once at start, naming the instance", () => {
-			const {instance, logged} = startInstance({label: "CO₂", bands: [{to: 100, level: "good", text: "Gut"}]});
+			const {instance, logged} = startInstance({label: "CO₂", min: 0, max: 100, bands: [{to: 100, level: "good", text: "Gut"}]});
 			instance.notificationReceived("", {});
 			assert.deepEqual(
 				logged.map((entry) => entry.message),
@@ -550,6 +569,209 @@ describe(MODULE_NAME, () => {
 		});
 	});
 
+	describe("presets and units", () => {
+		const TEMPERATURE = {...READING, quantity: "temperature", unit: "°C"};
+		const segments = (instance) => instance.dom.segments.length;
+		const label = (instance) => instance.dom.label.textContent;
+		const icon = (instance) => (instance.dom.icon.style.display === "none" ? "" : instance.dom.icon.innerHTML);
+		const marker = (instance) => {
+			const {attributes} = instance.dom.marker;
+			return [attributes.cx, attributes.cy];
+		};
+
+		it("takes scale, bands, icon and label from the preset of the `quantity` option", () => {
+			const {instance, logged} = startInstance({...READING, quantity: "carbon_dioxide", unit: "ppm"}, {language: "en"});
+			receive(instance, 1200);
+			assert.deepEqual([label(instance), segments(instance), shown(instance).status], ["CO₂", 3, "Ventilate"]);
+			assert.match(icon(instance), /circle/);
+			assert.deepEqual([instance.settings.min, instance.settings.max], [400, 2500]);
+			assert.deepEqual(logged, []);
+		});
+
+		it("takes the preset of a quantity from the payload once a reading brings it", () => {
+			const {instance, logged} = startInstance(
+				{...READING, fields: {value: "value", quantity: "kind", unit: "unit"}},
+				{language: "en"}
+			);
+			assert.deepEqual(logged, []);
+			instance.notificationReceived("TEST_READING", {id: "x", value: 45, kind: "humidity", unit: "%"});
+			assert.deepEqual([label(instance), segments(instance), shown(instance).status], ["Humidity", 4, "Optimal"]);
+			assert.equal(instance.dom.root.find("ring-gauge-scale").children.at(-1), instance.dom.marker);
+			assert.deepEqual(logged, []);
+		});
+
+		it("keeps the settings of the last valid reading while an unavailable one lacks quantity and unit", () => {
+			const {instance, logged} = startInstance(
+				{...READING, fields: {value: "value", quantity: "kind", unit: "unit"}},
+				{units: "metric", language: "en"}
+			);
+			instance.notificationReceived("TEST_READING", {id: "x", value: 70, kind: "temperature", unit: "°F"});
+			instance.notificationReceived("TEST_READING", {id: "x", value: "unavailable", kind: "", unit: ""});
+			assert.deepEqual([shown(instance).value, shown(instance).unit, shown(instance).dimmed], ["21", "°C", true]);
+			assert.deepEqual([label(instance), segments(instance)], ["Temperature", 5]);
+			assert.deepEqual(logged, []);
+		});
+
+		it("logs a missing `min` or `max` without a preset and shows the value without a marker", () => {
+			const bands = [{to: 100, level: "good", text: "Fine"}];
+			const {instance, logged} = startInstance({...READING, label: "X", max: 100, bands});
+			receive(instance, 50);
+			assert.deepEqual([shown(instance).value, shown(instance).marker, shown(instance).status], ["50", false, ""]);
+			assert.deepEqual(logged, [{level: "error", message: `${MODULE_NAME} (X): \`min\` is not set, and without a quantity`}]);
+
+			const other = startInstance({...READING, label: "X", quantity: "pressure", min: 0, bands});
+			assert.deepEqual(other.logged.map((entry) => entry.message), [
+				`${MODULE_NAME} (X): \`max\` is not set, and quantity "pressure" has no preset`
+			]);
+		});
+
+		for (const [name, quantity] of [["an unknown", "pressure"], ["a missing", ""]]) {
+			it(`needs min, max and bands from the config for ${name} quantity`, () => {
+				const {instance, logged} = startInstance({...READING, label: "X", quantity});
+				receive(instance, 50);
+				assert.deepEqual([shown(instance).value, segments(instance), label(instance)], ["50", 0, "X"]);
+				const without = quantity === "" ? "without a quantity" : `quantity "${quantity}" has no preset`;
+				assert.deepEqual(logged.map((entry) => entry.message), [
+					`${MODULE_NAME} (X): \`min\` is not set, and ${without}`,
+					`${MODULE_NAME} (X): \`max\` is not set, and ${without}`,
+					`${MODULE_NAME} (X): no bands configured`
+				]);
+			});
+		}
+
+		it("lets each option of the config override its part of the preset", () => {
+			const {instance, logged} = startInstance(
+				{...READING, quantity: "humidity", label: "Bath", icon: "co2", min: 30, max: 70, bands: [{to: 70, level: "good"}]},
+				{language: "en"}
+			);
+			receive(instance, 50);
+			assert.equal(label(instance), "Bath");
+			assert.match(icon(instance), /circle/);
+			assert.deepEqual([instance.settings.min, instance.settings.max], [30, 70]);
+			// Halfway along the arc: straight up.
+			assert.deepEqual(marker(instance), ["105.00", "27.00"]);
+			assert.deepEqual(logged, []);
+
+			const hidden = startInstance({...READING, quantity: "humidity", label: "", icon: ""}, {language: "en"}).instance;
+			assert.deepEqual([label(hidden), icon(hidden), segments(hidden)], ["", "", 4]);
+		});
+
+		it("replaces the preset's bands as a whole with bands from the config", () => {
+			const bands = [
+				{to: 1500, level: "good", text: "Fine"},
+				{to: 2500, level: "bad"}
+			];
+			const {instance} = startInstance({...READING, quantity: "carbon_dioxide", bands}, {language: "en"});
+			receive(instance, 1000);
+			assert.deepEqual([segments(instance), shown(instance).status], [2, "Fine"]);
+			// A band from the config without `text` shows no status word.
+			receive(instance, 2000);
+			assert.equal(shown(instance).status, "");
+		});
+
+		it("shows a °C reading in °F on an imperial mirror", () => {
+			const {instance, logged} = startInstance(TEMPERATURE, {units: "imperial", language: "en"});
+			receive(instance, 20);
+			assert.deepEqual([shown(instance).value, shown(instance).unit, shown(instance).status], ["68", "°F", "Comfortable"]);
+			assert.deepEqual([instance.settings.min, instance.settings.max], [50, 86]);
+			assert.deepEqual(logged, []);
+		});
+
+		it("shows a °F reading in °C on a metric mirror", () => {
+			const {instance} = startInstance({...TEMPERATURE, unit: "°F"}, {units: "metric", language: "en"});
+			receive(instance, 50);
+			assert.deepEqual([shown(instance).value, shown(instance).unit, shown(instance).status], ["10", "°C", "Too cold"]);
+		});
+
+		it("shows °C before the first reading on a metric mirror", () => {
+			const {instance} = startInstance({...TEMPERATURE, unit: "°F"});
+			assert.deepEqual([shown(instance).value, shown(instance).unit], ["—", "°C"]);
+		});
+
+		it("puts the marker at the same place with the same status on a metric and an imperial mirror", () => {
+			for (const reading of [9, 15.9, 16, 21.5, 26.99, 27, 31]) {
+				const metric = startInstance(TEMPERATURE, {units: "metric", language: "en"}).instance;
+				const imperial = startInstance(TEMPERATURE, {units: "imperial", language: "en"}).instance;
+				receive(metric, reading);
+				receive(imperial, reading);
+				assert.deepEqual(marker(imperial), marker(metric), String(reading));
+				assert.equal(shown(imperial).status, shown(metric).status, String(reading));
+			}
+		});
+
+		it("follows the `units` option over the mirror's `units`", () => {
+			const {instance} = startInstance({...TEMPERATURE, units: "imperial"}, {units: "metric"});
+			receive(instance, 20);
+			assert.deepEqual([shown(instance).value, shown(instance).unit], ["68", "°F"]);
+		});
+
+		it("logs `units` that are neither metric nor imperial and shows metric", () => {
+			const {instance, logged} = startInstance({...TEMPERATURE, label: "X", units: "kelvin"});
+			receive(instance, 20);
+			assert.deepEqual([shown(instance).value, shown(instance).unit], ["20", "°C"]);
+			assert.deepEqual(logged, [
+				{level: "error", message: `${MODULE_NAME} (X): \`units\` "kelvin" is neither "metric" nor "imperial"; showing metric`}
+			]);
+		});
+
+		it("takes `min`, `max` and `bands` from the config in the displayed unit", () => {
+			const bands = [
+				{to: 70, level: "good", text: "Below"},
+				{to: 90, level: "bad", text: "Above"}
+			];
+			const {instance, logged} = startInstance({...TEMPERATURE, min: 50, max: 90, bands}, {units: "imperial"});
+			// 21 °C is 69.8 °F, 22 °C is 71.6 °F.
+			receive(instance, 21);
+			assert.equal(shown(instance).status, "Below");
+			receive(instance, 22);
+			assert.equal(shown(instance).status, "Above");
+			assert.deepEqual(logged, []);
+		});
+
+		it("shows a temperature in an unknown unit as reported, without preset, and names the unit", () => {
+			const {instance, logged} = startInstance({...TEMPERATURE, label: "X", unit: "K"}, {units: "imperial"});
+			receive(instance, 293);
+			assert.deepEqual([shown(instance).value, shown(instance).unit, segments(instance)], ["293", "K", 0]);
+			assert.deepEqual(logged[0], {
+				level: "warn",
+				message: `${MODULE_NAME} (X): temperature in unit "K" is shown as reported, without conversion and without preset`
+			});
+		});
+
+		it("leaves quantities with the same unit in both systems as they are", () => {
+			const {instance} = startInstance({...READING, quantity: "humidity", unit: "%"}, {units: "imperial"});
+			receive(instance, 45);
+			assert.deepEqual([shown(instance).value, shown(instance).unit], ["45", "%"]);
+			assert.deepEqual([instance.settings.min, instance.settings.max], [20, 80]);
+		});
+
+		for (const [language, expected] of [
+			["en", ["Temperature", "Comfortable"]],
+			["de", ["Temperatur", "Angenehm"]]
+		]) {
+			it(`shows the preset texts in the mirror's language: ${language}`, () => {
+				const {instance} = startInstance(TEMPERATURE, {language});
+				receive(instance, 21);
+				assert.deepEqual([label(instance), shown(instance).status], expected);
+			});
+		}
+
+		it("has every preset text in every translation file", () => {
+			const {PRESETS} = require("../presets.js");
+			const keys = Object.values(PRESETS).flatMap((preset) => [preset.label, ...preset.bands.map((band) => band.text)]);
+			const languages = fs.readdirSync(path.join(REPO_ROOT, "translations"));
+			const translate = loadModule()[MODULE_NAME].getTranslations();
+			assert.deepEqual(Object.keys(translate).map((language) => `${language}.json`).sort(), [...languages].sort());
+			for (const file of languages) {
+				const texts = JSON.parse(read(`translations/${file}`));
+				assert.deepEqual(Object.keys(texts).sort(), [...keys].sort(), file);
+				for (const key of keys) {
+					assert.ok(texts[key].trim() !== "", `${file}: ${key}`);
+				}
+			}
+		});
+	});
+
 	describe("README, Advanced: mapping function", () => {
 		const section = read("README.md").split("## Advanced: mapping function")[1].split("\n## ")[0];
 		const blocks = (language) =>
@@ -612,7 +834,7 @@ describe(MODULE_NAME, () => {
 			assert.equal(shown(instance).value, "—");
 			const message = `${MODULE_NAME} (CO₂): \`transform\` threw: ReferenceError: parsePpm is not defined`;
 			assert.deepEqual(
-				logged.filter((entry) => !entry.message.includes("bands")),
+				logged.filter((entry) => entry.message.includes("transform")),
 				[{level: "error", message}]
 			);
 			assert.ok(section.includes(message), "the README quotes the message");

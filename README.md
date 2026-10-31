@@ -65,19 +65,14 @@ the connection changes:
       notification: "HOME_ASSISTANT_CONNECTION",
       connected: "connected",
       graceAfter: 30000
-    },
-    label: "CO₂",
-    icon: "co2",
-    min: 400,
-    max: 2500,
-    bands: [
-      { to: 1000, level: "good", text: "Gut" },
-      { to: 2000, level: "warn", text: "Lüften" },
-      { to: 2500, level: "bad", text: "Jetzt lüften" }
-    ]
+    }
   }
 }
 ```
+
+The provider sends the quantity, here `carbon_dioxide`, so the gauge
+takes scale, bands, icon, label and status texts from its
+[preset](#presets).
 
 `graceAfter: 30000` matches the provider's own delay: it marks its
 readings `available: false` only after 30 s without connection, so the
@@ -112,23 +107,82 @@ A source that sends `AIR_SENSOR_UPDATE` with this payload:
     },
     unit: "%",
     quantity: "humidity",
-    staleAfter: 15 * 60 * 1000,
-    label: "Humidity",
-    icon: "humidity",
-    min: 20,
-    max: 80,
-    bands: [
-      { to: 30, level: "warn", text: "Zu trocken" },
-      { to: 60, level: "good", text: "Optimal" },
-      { to: 70, level: "warn", text: "Zu feucht" },
-      { to: 80, level: "bad", text: "Viel zu feucht" }
-    ]
+    staleAfter: 15 * 60 * 1000
   }
 }
 ```
 
-This source signals no availability, so `staleAfter` dims the value once
-no update has come for 15 minutes.
+The payload holds no quantity, so `quantity` names it and the gauge takes
+the humidity preset. This source signals no availability, so `staleAfter`
+dims the value once no update has come for 15 minutes.
+
+### Presets
+
+For the quantities `carbon_dioxide`, `humidity` and `temperature`, the
+gauge brings scale, bands, icon, label and status texts, in English or
+German after the mirror's `language`:
+
+| Quantity | Range | Bands, up to | Label |
+| --- | --- | --- | --- |
+| `carbon_dioxide` | 400–2500 ppm | 1000 good "Good", 2000 warn "Ventilate", 2500 bad "Ventilate now" | CO₂ |
+| `humidity` | 20–80 % | 30 warn "Too dry", 60 good "Optimal", 70 warn "Too humid", 80 bad "Far too humid" | Humidity |
+| `temperature` | 10–30 °C | 16 bad "Too cold", 19 warn "Cool", 24 good "Comfortable", 27 warn "Warm", 30 bad "Too warm" | Temperature |
+
+The icon has the name of the quantity: `co2`, `humidity`,
+`temperature`. The quantity comes from the payload by `fields.quantity`
+or from `transform`, else from the option `quantity`. A typical instance
+then names only its reading:
+
+```js
+config: {
+  notification: "AIR_SENSOR_UPDATE",
+  fields: { value: "co2" },
+  unit: "ppm",
+  quantity: "carbon_dioxide"
+}
+```
+
+```js
+config: {
+  notification: "AIR_SENSOR_UPDATE",
+  fields: { value: "humidity" },
+  unit: "%",
+  quantity: "humidity"
+}
+```
+
+```js
+config: {
+  notification: "AIR_SENSOR_UPDATE",
+  fields: { value: "temperature" },
+  unit: "°C",
+  quantity: "temperature"
+}
+```
+
+Every option set in the config overrides its part of the preset, e.g.
+`label: "Bedroom"` or `max: 2000`; `label: ""` and `icon: ""` hide them.
+`bands` from the config replace the preset's bands as a whole and carry
+their own `text`; a band without `text` shows no status word.
+
+Without a preset for the quantity, or without a quantity, the config has
+to set `min`, `max` and `bands`.
+
+### Units
+
+The gauge shows temperatures in the mirror's unit system, `units` in
+`config.js`: °C for `metric`, °F for `imperial`. The option `units`
+overrides it per instance. A reading in °C or °F is converted; the unit
+the reading comes in is the one from `fields.unit`, `transform` or the
+option `unit`. The temperature preset is converted too, so that the
+ring looks and assesses the same in both systems: 10–30 °C become
+50–86 °F.
+
+`min`, `max` and `bands` from the config are in the unit the gauge
+shows. A temperature in another unit, e.g. K, is shown as reported,
+without conversion and without preset, and the browser console names its
+unit once. Units that are the same in both systems, such as ppm and %,
+stay as they are.
 
 ### Options
 
@@ -169,12 +223,16 @@ Display:
 
 | Option | Default | Type | Description |
 | --- | --- | --- | --- |
-| `label` | `""` | string | Name above the value, shown in upper case. |
-| `icon` | `""` | string | `co2`, `humidity` or `temperature`; empty for none. |
-| `min` | `0` | number | Start of the scale. |
-| `max` | `100` | number | End of the scale. |
-| `bands` | `[]` | array | Bands from `min` to `max` without gaps: `{ to, level, text }`, `level` one of `good`, `warn`, `bad`. A value below `to` falls into the band. |
+| `label` | preset | string | Name above the value, shown in upper case; `""` for none. |
+| `icon` | preset | string | `co2`, `humidity` or `temperature`; `""` for none. |
+| `min` | preset | number | Start of the scale, in the displayed unit. Required without a preset. |
+| `max` | preset | number | End of the scale, in the displayed unit. Required without a preset. |
+| `bands` | preset | array | Bands from `min` to `max` without gaps: `{ to, level, text }`, `level` one of `good`, `warn`, `bad`, `to` in the displayed unit. A value below `to` falls into the band. Required without a preset. |
 | `decimals` | `0` | number | Decimal places of the value. |
+| `units` | `config.units` | string | `metric` or `imperial`: the unit system temperatures are shown in. |
+
+"preset" is the part of the [preset](#presets) for the reading's
+quantity; without one, `label` and `icon` stay empty.
 
 ### What the gauge shows
 
@@ -204,7 +262,9 @@ problem once as an error in the browser console, named by its `label`
 (or its `notification` without one): a missing `notification`, neither
 `fields.value` nor `transform`, a path of `fields` or
 `connection.connected` that a matching payload lacks, a `transform` that
-throws or returns something other than an object or `null`.
+throws or returns something other than an object or `null`, `units`
+other than `metric` and `imperial` (the gauge then shows metric). A
+temperature in a unit other than °C and °F is logged as a warning.
 
 What the gauge does with such a notification:
 
@@ -218,15 +278,18 @@ What the gauge does with such a notification:
 - A missing path of another field: the reading counts without that
   field, as if its path were not set.
 
-At start, each instance also checks its bands: no bands, a `to` that is
-not a number or does not ascend, bands ending before `max`, a `level`
-other than `good`, `warn` or `bad`. Invalid bands do not stop the value
-and the marker. Without bands, no segment is drawn and no status word is
-shown. A band whose `to` is not a number is left out. If the drawn bands
-end before `max`, a value from their end on takes no band and shows no
-status word. A band with an unknown level leaves a gap in the ring, and
-its text is shown uncolored. A band narrower than the 5-unit gap between
-segments is not drawn.
+Each instance also checks its scale and bands, at start, or with the
+first valid reading when the quantity or a temperature's unit comes from
+the payload: `min` or `max` missing without a preset, no bands, a `to`
+that is not a number or does not ascend, bands ending before `max`, a
+`level` other than `good`, `warn` or `bad`. Invalid bands do not stop
+the value and the marker. Without `min` or `max`, the gauge shows the
+value without marker, segments and status word. Without bands, no
+segment is drawn and no status word is shown. A band whose `to` is not
+a number is left out. If the drawn bands end before `max`, a value from
+their end on takes no band and shows no status word. A band with an
+unknown level leaves a gap in the ring, and its text is shown uncolored.
+A band narrower than the 5-unit gap between segments is not drawn.
 
 ## Advanced: mapping function
 
@@ -419,15 +482,6 @@ photo, `--wb-tint-dark` is invalid and the fallback applies:
 ```
 
 The full visual specification is in [docs/design.md](docs/design.md).
-
-## Open questions
-
-- **Open – presets per quantity:** whether the module ships presets for
-  CO₂, humidity and temperature (range, bands, icon, status texts via
-  `translations/`), so that a typical instance only names its reading.
-  Proposed: yes, with each part overridable in the config.
-- **Open – status texts:** in the config (as now) or as translation keys
-  per level.
 
 ## Development
 

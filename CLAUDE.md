@@ -28,8 +28,9 @@ deviation in its last section.
   "Requirements".
 - Readings carry facts only: value, unit, quantity, report time,
   availability. Scale, bands, label, icon and status texts belong to this
-  module's config. Never expect a level or assessment from a source: it
-  would have to know thresholds and couple to this module.
+  module: its presets per quantity and the instance's config. Never expect
+  a level or assessment from a source: it would have to know thresholds
+  and couple to this module.
 - Build the DOM once; update existing elements. Do not call
   `updateDom()` for a new value: replacing the DOM breaks the marker
   movement.
@@ -77,7 +78,4 @@ and users install by `git clone` only.
 
 ## Open
 
-- **Open:** presets per quantity in the module vs. full config per
-  instance (proposed: presets in the module, overridable).
-- **Open:** status texts in the config or as translation keys per level.
 - **Open:** a `CHANGELOG.md` and a screenshot for the module list.

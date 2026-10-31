@@ -499,6 +499,76 @@ pnpm dlx @biomejs/biome@2.6.3 ci .
 node --test "tests/**/*.test.js"
 ```
 
+### Fake readings
+
+`dev/MMM-FakeReadings/` is a mock source for checking the gauge without
+sensors, e.g. the marker movement and the readability on the mirror's
+own hardware. It is not part of the gauge: MagicMirror² loads it only if
+`config.js` names it. It runs in the browser only and has no
+dependencies.
+
+Link it into the modules folder next to the gauge:
+
+```sh
+cd ~/MagicMirror/modules
+ln -s ~/MagicMirror/modules/MMM-RingGauge/dev/MMM-FakeReadings MMM-FakeReadings
+```
+
+Every `interval`, the mock sends one `FAKE_READING` per sensor –
+`co2`, `humidity` and `temperature` – with
+`{ sensor, quantity, unit, value, available }`. The values cross every
+band of the preset, jump from one end of the arc to the other, take
+small steps, and now and then come with `available: false`. Every
+`dropEvery` ticks, the mock sends `FAKE_CONNECTION` with
+`connected: false`, sends nothing for `dropFor` ticks, and then sends
+`connected: true`.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `readingNotification` | `"FAKE_READING"` | Name of the reading notification. |
+| `connectionNotification` | `"FAKE_CONNECTION"` | Name of the connection notification. |
+| `interval` | `4000` | Time between two ticks, in ms. |
+| `dropEvery` | `24` | Ticks per cycle; the connection drops at the end of each. `0` never drops it. |
+| `dropFor` | `3` | Ticks per cycle without connection. |
+
+Three gauges side by side that read from the mock. Add
+[WallberryTheme](https://github.com/raywo/WallberryTheme) as its README
+describes, to check them over its background photo:
+
+```js
+modules: [
+  { module: "MMM-FakeReadings" },
+  ...[
+    ["co2", "carbon_dioxide", "ppm"],
+    ["humidity", "humidity", "%"],
+    ["temperature", "temperature", "°C"]
+  ].map(([sensor, quantity, unit]) => ({
+    module: "MMM-RingGauge",
+    position: "bottom_center",
+    config: {
+      notification: "FAKE_READING",
+      match: { sensor: sensor },
+      fields: {
+        value: "value",
+        unit: "unit",
+        quantity: "quantity",
+        available: "available"
+      },
+      quantity: quantity,
+      unit: unit,
+      connection: {
+        notification: "FAKE_CONNECTION",
+        connected: "connected",
+        graceAfter: 5000
+      }
+    }
+  }))
+]
+```
+
+With the defaults, a drop lasts 12 s, so the gauges dim 5 s into it and
+light up again with the next reading.
+
 ## License
 
 MIT

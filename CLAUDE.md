@@ -67,7 +67,8 @@ and users install by `git clone` only.
 - Syntax check: `git ls-files '*.js' | xargs -n1 node --check`
 - Lint: `pnpm dlx @biomejs/biome@2.6.3 ci .` – Biome runs standalone and
   needs no entry in `package.json`. Keep its version the same in the
-  `$schema` of `biome.json`, in the workflow and here.
+  `$schema` of `biome.json`, in the workflow, in the README section
+  "Development" and here.
 - Tests: `node --test "tests/**/*.test.js"`. Do not add Vitest, Jest or
   ESLint: they need dependencies and a lockfile.
 - Keep the workflow on the action and Node versions the MagicMirror²

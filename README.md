@@ -122,6 +122,17 @@ The full visual specification is in [docs/design.md](docs/design.md).
 - **Open – status texts:** in the config (as now) or as translation keys
   per level.
 
+## Development
+
+The module has no build step and no dependencies. Run the checks the
+workflow runs on every pull request:
+
+```sh
+git ls-files '*.js' | xargs -n1 node --check
+pnpm dlx @biomejs/biome@2.6.3 ci .
+node --test "tests/**/*.test.js"
+```
+
 ## License
 
 MIT

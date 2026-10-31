@@ -24,7 +24,9 @@ module.exports = NodeHelper.create({
   },
 
   stop () {
-    this.timers.forEach((timer) => clearInterval(timer));
+    this.timers.forEach((timer) => {
+      clearInterval(timer);
+    });
   },
 
   // getServerModuleConfig() only finds the first instance.

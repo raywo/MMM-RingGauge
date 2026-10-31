@@ -157,7 +157,9 @@ Module.register("MMM-RingGauge", {
 
     const { root, segments, marker, status } = this.dom;
     root.classList.toggle("ring-gauge-stale", stale);
-    segments.forEach((segment, index) => segment.classList.toggle("ring-gauge-active", index === band));
+    segments.forEach((segment, index) => {
+      segment.classList.toggle("ring-gauge-active", index === band);
+    });
     this.dom.value.textContent = value === null
       ? "—"
       : new Intl.NumberFormat(config.locale, {

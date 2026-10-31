@@ -96,6 +96,7 @@ Status colors differ in lightness too, not only in hue:
 | `good` | `#4ade80` |
 | `warn` | `#fbbf24` |
 | `bad` | `#f87171` |
+| `cold` | `#38bdf8` |
 
 ## Icons
 
@@ -147,7 +148,7 @@ converted to °F (50–86 °F):
 | Up to | Level | Status |
 | --- | --- | --- |
 | 16 | bad | Zu kalt |
-| 19 | warn | Kühl |
+| 19 | cold | Kühl |
 | 24 | good | Angenehm |
 | 27 | warn | Warm |
 | 30 | bad | Zu warm |
@@ -208,3 +209,7 @@ German ones.
   property `--ring-gauge-unavailable`, by default the `warn` color, and
   takes the 18 px of the status line, so the value does not move when
   the gauge dims.
+- **Free band colors:** besides its level, a band may set its own
+  `color`, any CSS color. The status colors above are chosen to stay
+  readable on the halo over a bright photo; a free color is not, and its
+  readability is up to the user.

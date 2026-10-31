@@ -51,7 +51,7 @@
       max: 30,
       bands: [
         { to: 16, level: "bad", text: "TEMPERATURE_TOO_COLD" },
-        { to: 19, level: "warn", text: "TEMPERATURE_COOL" },
+        { to: 19, level: "cold", text: "TEMPERATURE_COOL" },
         { to: 24, level: "good", text: "TEMPERATURE_COMFORTABLE" },
         { to: 27, level: "warn", text: "TEMPERATURE_WARM" },
         { to: 30, level: "bad", text: "TEMPERATURE_TOO_WARM" }

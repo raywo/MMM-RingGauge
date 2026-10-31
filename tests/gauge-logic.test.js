@@ -162,6 +162,28 @@ describe("segmentGeometry", () => {
 	});
 });
 
+// Stands in for CSS.supports("color", …), which Node lacks.
+const isColor = (value) => /^(#[0-9a-f]{3,8}|red|var\(--[\w-]+\))$/i.test(value);
+
+describe("bandPaint", () => {
+	it("paints a band by its level", () => {
+		for (const level of ["good", "warn", "bad", "cold"]) {
+			assert.deepEqual(logic.bandPaint({to: 1, level}, isColor), {level});
+		}
+	});
+
+	it("paints a band by its `color`, also over its level", () => {
+		assert.deepEqual(logic.bandPaint({to: 1, color: "#60a5fa"}, isColor), {color: "#60a5fa"});
+		assert.deepEqual(logic.bandPaint({to: 1, level: "bad", color: "var(--my-cold)"}, isColor), {color: "var(--my-cold)"});
+	});
+
+	it("paints no band with an unknown level, an invalid `color` or neither", () => {
+		for (const band of [{to: 1, level: "critical"}, {to: 1, level: "good", color: "blau"}, {to: 1, color: 7}, {to: 1}]) {
+			assert.equal(logic.bandPaint(band, isColor), null, JSON.stringify(band));
+		}
+	});
+});
+
 describe("bandProblems", () => {
 	it("finds none in the bands of the design", () => {
 		assert.deepEqual(logic.bandProblems(CO2.bands, CO2.max), []);
@@ -201,14 +223,37 @@ describe("bandProblems", () => {
 	it("reports an unknown level", () => {
 		const bands = [{to: 50, level: "good"}, {to: 100, level: "critical"}];
 		assert.deepEqual(logic.bandProblems(bands, 100), [
-			'band 1: unknown level "critical", expected one of good, warn, bad'
+			'band 1: unknown level "critical", expected one of good, warn, bad, cold'
 		]);
 	});
 
-	it("reports a missing level", () => {
-		const bands = [{to: 100}];
-		assert.deepEqual(logic.bandProblems(bands, 100), [
-			"band 0: unknown level undefined, expected one of good, warn, bad"
+	it("reports a band with neither `level` nor `color`", () => {
+		for (const band of [{to: 100}, {to: 100, level: null, color: null}]) {
+			assert.deepEqual(logic.bandProblems([band], 100, isColor), ["band 0: neither `level` nor `color` set"]);
+		}
+	});
+
+	it("accepts the level cold", () => {
+		const bands = [{to: 20, level: "cold"}, {to: 100, level: "good"}];
+		assert.deepEqual(logic.bandProblems(bands, 100, isColor), []);
+	});
+
+	it("accepts a `color` without `level`", () => {
+		const bands = [{to: 20, color: "#60a5fa"}, {to: 100, color: "var(--my-cold)"}];
+		assert.deepEqual(logic.bandProblems(bands, 100, isColor), []);
+	});
+
+	it("accepts a `color` next to any `level`", () => {
+		const bands = [{to: 20, level: "warn", color: "#60a5fa"}, {to: 100, level: "critical", color: "red"}];
+		assert.deepEqual(logic.bandProblems(bands, 100, isColor), []);
+	});
+
+	it("reports a `color` the browser does not accept", () => {
+		const bands = [{to: 20, level: "good", color: "blau"}, {to: 50, color: ""}, {to: 100, color: 42}];
+		assert.deepEqual(logic.bandProblems(bands, 100, isColor), [
+			'band 0: `color` "blau" is not a CSS color',
+			'band 1: `color` "" is not a CSS color',
+			"band 2: `color` 42 is not a CSS color"
 		]);
 	});
 
@@ -234,7 +279,7 @@ describe("bandProblems", () => {
 		const bands = [{to: 60, level: "good"}, {to: 40, level: "red"}];
 		assert.deepEqual(logic.bandProblems(bands, 100), [
 			"band 1: `to` 40 does not ascend from 60",
-			'band 1: unknown level "red", expected one of good, warn, bad',
+			'band 1: unknown level "red", expected one of good, warn, bad, cold',
 			"bands end at 40, before max 100"
 		]);
 	});

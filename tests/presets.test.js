@@ -43,6 +43,23 @@ describe("settings", () => {
 		}
 	});
 
+	it("shows the temperature preset's cool range as cold, its other bands as before", () => {
+		const levels = PRESETS.temperature.bands.map((band) => [band.text, band.level]);
+		assert.deepEqual(levels, [
+			["TEMPERATURE_TOO_COLD", "bad"],
+			["TEMPERATURE_COOL", "cold"],
+			["TEMPERATURE_COMFORTABLE", "good"],
+			["TEMPERATURE_WARM", "warn"],
+			["TEMPERATURE_TOO_WARM", "bad"]
+		]);
+	});
+
+	it("keeps the CO2 and humidity presets without a cold band", () => {
+		const levels = (quantity) => PRESETS[quantity].bands.map((band) => band.level);
+		assert.deepEqual(levels("carbon_dioxide"), ["good", "warn", "bad"]);
+		assert.deepEqual(levels("humidity"), ["warn", "good", "warn", "bad"]);
+	});
+
 	it("converts the temperature preset for imperial without gaps", () => {
 		const result = settings({}, {quantity: "temperature", unit: "°C"}, "imperial", translate);
 		assert.deepEqual(result.problems, []);

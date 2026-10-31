@@ -131,7 +131,7 @@ German after the mirror's `language`:
 | --- | --- | --- | --- |
 | `carbon_dioxide` | 400–2500 ppm | 1000 good "Good", 2000 warn "Ventilate", 2500 bad "Ventilate now" | CO₂ |
 | `humidity` | 20–80 % | 30 warn "Too dry", 60 good "Optimal", 70 warn "Too humid", 80 bad "Far too humid" | Humidity |
-| `temperature` | 10–30 °C | 16 bad "Too cold", 19 warn "Cool", 24 good "Comfortable", 27 warn "Warm", 30 bad "Too warm" | Temperature |
+| `temperature` | 10–30 °C | 16 bad "Too cold", 19 cold "Cool", 24 good "Comfortable", 27 warn "Warm", 30 bad "Too warm" | Temperature |
 
 The icon has the name of the quantity: `co2`, `humidity`,
 `temperature`. The quantity comes from the payload by `fields.quantity`
@@ -172,6 +172,25 @@ their own `text`; a band without `text` shows no status word.
 
 Without a preset for the quantity, or without a quantity, the config has
 to set `min`, `max` and `bands`.
+
+### Band colors
+
+A band takes its color from `level` – `good` (green), `warn` (yellow),
+`bad` (red) or `cold` (blue) – or from its own `color`. The segment and
+the status word show that color. `color` takes any CSS color, also
+`var(--…)`, so that `custom.css` can set it, and wins over `level`:
+
+```js
+bands: [
+  { to: 16, level: "bad", text: "Zu kalt" },
+  { to: 20, color: "#60a5fa", text: "Kühl" },
+  { to: 24, level: "good", text: "Angenehm" },
+  { to: 30, color: "var(--my-warm)", text: "Warm" }
+]
+```
+
+The level colors are chosen to stay readable on the halo over a bright
+photo. Whether a free `color` does is up to you.
 
 ### Units
 
@@ -232,7 +251,7 @@ Display:
 | `icon` | preset | string | `co2`, `humidity` or `temperature`; `""` for none. |
 | `min` | preset | number | Start of the scale, in the displayed unit. Required without a preset. |
 | `max` | preset | number | End of the scale, in the displayed unit. Required without a preset. |
-| `bands` | preset | array | Bands from `min` to `max` without gaps: `{ to, level, text }`, `level` one of `good`, `warn`, `bad`, `to` in the displayed unit. A value below `to` falls into the band. Required without a preset. |
+| `bands` | preset | array | Bands from `min` to `max` without gaps: `{ to, level, color, text }`, `to` in the displayed unit. A value below `to` falls into the band. Each band needs `level` or `color`; see [Band colors](#band-colors). Required without a preset. |
 | `decimals` | `0` | number | Decimal places of the value. The band and the status word follow the value as shown, rounded to these places; the marker shows the exact value. |
 | `units` | `config.units` | string | `metric` or `imperial`: the unit system temperatures are shown in. |
 
@@ -287,13 +306,16 @@ Each instance also checks its scale and bands, at start, or with the
 first valid reading when the quantity or a temperature's unit comes from
 the payload: `min` or `max` missing without a preset, no bands, a `to`
 that is not a number or does not ascend, bands ending before `max`, a
-`level` other than `good`, `warn` or `bad`. Invalid bands do not stop
+`level` other than `good`, `warn`, `bad` and `cold`, a `color` the
+browser does not accept as a CSS color, a band with neither `level` nor
+`color`. Invalid bands do not stop
 the value and the marker. Without `min` or `max`, the gauge shows the
 value without marker, segments and status word. Without bands, no
 segment is drawn and no status word is shown. A band whose `to` is not
 a number is left out. If the drawn bands end before `max`, a value from
 their end on takes no band and shows no status word. A band with an
-unknown level leaves a gap in the ring, and its text is shown uncolored.
+unknown level or an invalid `color` leaves a gap in the ring, and its
+text is shown uncolored.
 A band narrower than the 5-unit gap between segments is not drawn.
 
 ## Advanced: mapping function
@@ -473,7 +495,7 @@ them in `config/custom.css`:
 | --- | --- |
 | `--ring-gauge-size` | `210px` |
 | `--ring-gauge-scrim` | `rgb(8, 10, 14)` – color of the halo |
-| `--ring-gauge-good`, `--ring-gauge-warn`, `--ring-gauge-bad` | `#4ade80`, `#fbbf24`, `#f87171` |
+| `--ring-gauge-good`, `--ring-gauge-warn`, `--ring-gauge-bad`, `--ring-gauge-cold` | `#4ade80`, `#fbbf24`, `#f87171`, `#38bdf8` |
 | `--ring-gauge-text`, `--ring-gauge-label`, `--ring-gauge-unit` | text colors |
 | `--ring-gauge-unavailable` | `var(--ring-gauge-warn)` – color of the "link broken" symbol |
 | `--ring-gauge-gap` | `48px` – space between instances in one region |

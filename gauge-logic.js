@@ -51,11 +51,28 @@
     });
   }
 
-  const LEVELS = ["good", "warn", "bad"];
+  const LEVELS = ["good", "warn", "bad", "cold"];
+
+  function hasColor (band) {
+    return band.color !== undefined && band.color !== null;
+  }
+
+  // How a band is painted: { color } if it sets its own color, else
+  // { level }. null if neither is valid: the band leaves a gap in the
+  // ring, and its status word stays uncolored. `color` wins over `level`,
+  // also over an unknown one.
+  //   isColor  whether the browser accepts a string as a CSS color
+  function bandPaint (band, isColor) {
+    if (hasColor(band)) {
+      return typeof band.color === "string" && isColor(band.color) ? { color: band.color } : null;
+    }
+    return LEVELS.includes(band.level) ? { level: band.level } : null;
+  }
 
   // Configuration errors of the bands, one message each; empty if valid.
   // Without bands only that one message: the other checks need bands.
-  function bandProblems (bands, max) {
+  // `isColor` as for bandPaint().
+  function bandProblems (bands, max, isColor) {
     if (!Array.isArray(bands) || bands.length === 0) {
       return ["no bands configured"];
     }
@@ -74,7 +91,14 @@
       if (Number.isFinite(band.to)) {
         previous = band.to;
       }
-      if (!LEVELS.includes(band.level)) {
+      if (bandPaint(band, isColor) !== null) {
+        return;
+      }
+      if (hasColor(band)) {
+        problems.push("band " + index + ": `color` " + JSON.stringify(band.color) + " is not a CSS color");
+      } else if (band.level === undefined || band.level === null) {
+        problems.push("band " + index + ": neither `level` nor `color` set");
+      } else {
         problems.push("band " + index + ": unknown level " + JSON.stringify(band.level)
           + ", expected one of " + LEVELS.join(", "));
       }
@@ -112,6 +136,7 @@
     ARC_LENGTH,
     SEGMENT_GAP,
     LEVELS,
+    bandPaint,
     bandIndex,
     segmentGeometry,
     bandProblems,

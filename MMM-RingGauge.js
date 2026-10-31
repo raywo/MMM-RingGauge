@@ -39,7 +39,8 @@ Module.register("MMM-RingGauge", {
     icon: null,
     min: null,
     max: null,
-    // Contiguous from min to max: [{ to, level: "good" | "warn" | "bad", text }].
+    // Contiguous from min to max:
+    // [{ to, level: "good" | "warn" | "bad" | "cold", color, text }].
     bands: null,
     decimals: 0,
     // "metric" or "imperial"; null follows the mirror's `units`.
@@ -180,7 +181,7 @@ Module.register("MMM-RingGauge", {
     if (report) {
       this.settingsReported = true;
       this.logProblems(settings.problems);
-      for (const problem of RingGaugeLogic.bandProblems(settings.bands, settings.max)) {
+      for (const problem of RingGaugeLogic.bandProblems(settings.bands, settings.max, this.isColor)) {
         this.logOnce("bands:" + problem, problem);
       }
     }
@@ -226,6 +227,12 @@ Module.register("MMM-RingGauge", {
       .filter((band) => band !== null && typeof band === "object" && Number.isFinite(band.to));
   },
 
+  // Whether the browser accepts a band's `color`; var(--…) passes, so
+  // that a theme can set it.
+  isColor (value) {
+    return CSS.supports("color", value);
+  },
+
   // Replaces the segments and sets icon and label; the marker and the
   // rest of the DOM stay.
   drawSettings () {
@@ -235,9 +242,11 @@ Module.register("MMM-RingGauge", {
       svg.removeChild(segment);
     }
     const geometry = RingGaugeLogic.segmentGeometry(this.bands, this.settings.min, this.settings.max);
-    this.dom.segments = this.bands.map((band, index) => {
+    this.paints = this.bands.map((band) => RingGaugeLogic.bandPaint(band, this.isColor));
+    // Without a valid paint the segment has no stroke: a gap.
+    this.dom.segments = this.paints.map((paint, index) => {
       const segment = this.svgElement("circle", {
-        class: "ring-gauge-segment ring-gauge-" + band.level,
+        class: "ring-gauge-segment" + (paint?.level ? " ring-gauge-" + paint.level : ""),
         cx: CENTER,
         cy: CENTER,
         r: RADIUS,
@@ -245,6 +254,9 @@ Module.register("MMM-RingGauge", {
         "stroke-dashoffset": geometry[index].dashOffset,
         transform: "rotate(" + START_ANGLE + " " + CENTER + " " + CENTER + ")"
       });
+      if (paint?.color) {
+        segment.style.stroke = paint.color;
+      }
       // Below the marker, which stays on top.
       svg.insertBefore(segment, marker);
       return segment;
@@ -322,14 +334,18 @@ Module.register("MMM-RingGauge", {
     status.style.display = unavailable ? "none" : "";
     this.dom.unavailable.style.display = unavailable ? "" : "none";
     status.className = "ring-gauge-status";
+    status.style.color = "";
     if (value === null || unavailable || band === -1) {
       // Without bands there is no assessment; value and marker still show.
       status.textContent = "";
     } else {
-      const { text, level } = this.bands[band];
+      const text = this.bands[band].text;
+      const paint = this.paints[band];
       status.textContent = text ?? "";
-      if (RingGaugeLogic.LEVELS.includes(level)) {
-        status.classList.add("ring-gauge-" + level);
+      if (paint?.level) {
+        status.classList.add("ring-gauge-" + paint.level);
+      } else if (paint?.color) {
+        status.style.color = paint.color;
       }
     }
 

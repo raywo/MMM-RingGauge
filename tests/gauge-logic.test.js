@@ -240,6 +240,22 @@ describe("bandProblems", () => {
 	});
 });
 
+describe("roundToDecimals", () => {
+	const cases = [
+		["up to the next band limit", 59.6, 0, 60],
+		["down", 59.4, 0, 59],
+		["half away from zero", 23.5, 0, 24],
+		["negative half away from zero", -0.5, 0, -1],
+		["with decimals", 59.95, 1, 60],
+		["unchanged with enough decimals", 21.25, 2, 21.25]
+	];
+	for (const [name, value, decimals, expected] of cases) {
+		it(`${name}: ${value} with ${decimals} decimals is ${expected}`, () => {
+			assert.equal(logic.roundToDecimals(value, decimals), expected);
+		});
+	}
+});
+
 describe("markerAngle", () => {
 	const cases = [
 		["CO₂ below min", CO2, 0, 135],

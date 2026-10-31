@@ -228,7 +228,7 @@ Display:
 | `min` | preset | number | Start of the scale, in the displayed unit. Required without a preset. |
 | `max` | preset | number | End of the scale, in the displayed unit. Required without a preset. |
 | `bands` | preset | array | Bands from `min` to `max` without gaps: `{ to, level, text }`, `level` one of `good`, `warn`, `bad`, `to` in the displayed unit. A value below `to` falls into the band. Required without a preset. |
-| `decimals` | `0` | number | Decimal places of the value. |
+| `decimals` | `0` | number | Decimal places of the value. The band and the status word follow the value as shown, rounded to these places; the marker shows the exact value. |
 | `units` | `config.units` | string | `metric` or `imperial`: the unit system temperatures are shown in. |
 
 "preset" is the part of the [preset](#presets) for the reading's

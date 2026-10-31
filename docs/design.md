@@ -192,3 +192,7 @@ German ones.
   end before `max`, a value takes no band and shows no status word. A
   band narrower than the gap gets the dash length `max(f_i · L − 5, 0)`
   instead of a negative one.
+- **Band of a rounded value:** the active band and the status word
+  follow the value as shown, rounded to `decimals`, so that one number
+  never shows two status words: 59.6 % shows as "60" and takes the band
+  from 60 on. The marker keeps the exact value.

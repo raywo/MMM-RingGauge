@@ -588,6 +588,16 @@ describe(MODULE_NAME, () => {
 			assert.deepEqual(logged, []);
 		});
 
+		it("assesses the value it shows: rounded to `decimals`, the marker stays exact", () => {
+			// 59.6 % shows as "60", which belongs to the band from 60 on.
+			const {instance} = startInstance({...READING, quantity: "humidity", unit: "%"}, {language: "en"});
+			receive(instance, 59.6);
+			assert.deepEqual([shown(instance).value, shown(instance).status], ["60", "Too humid"]);
+			assert.equal(instance.markerAngle, 135 + ((59.6 - 20) / (80 - 20)) * 270);
+			receive(instance, 59.4);
+			assert.deepEqual([shown(instance).value, shown(instance).status], ["59", "Optimal"]);
+		});
+
 		it("takes the preset of a quantity from the payload once a reading brings it", () => {
 			const {instance, logged} = startInstance(
 				{...READING, fields: {value: "value", quantity: "kind", unit: "unit"}},
@@ -730,8 +740,8 @@ describe(MODULE_NAME, () => {
 				{to: 70, level: "good", text: "Below"},
 				{to: 90, level: "bad", text: "Above"}
 			];
-			const {instance, logged} = startInstance({...TEMPERATURE, min: 50, max: 90, bands}, {units: "imperial"});
-			// 21 °C is 69.8 °F, 22 °C is 71.6 °F.
+			const {instance, logged} = startInstance({...TEMPERATURE, min: 50, max: 90, bands, decimals: 1}, {units: "imperial"});
+			// 21 °C is 69.8 °F, 22 °C is 71.6 °F; one decimal keeps 69.8 below 70.
 			receive(instance, 21);
 			assert.equal(shown(instance).status, "Below");
 			receive(instance, 22);

@@ -87,6 +87,17 @@
     return problems;
   }
 
+  // The number the gauge shows: rounded as Intl.NumberFormat rounds for
+  // display, half away from zero on the decimal value. Math.round would
+  // differ for negative halves and for binary fractions such as 59.95.
+  function roundToDecimals (value, decimals) {
+    return Number(new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+      useGrouping: false
+    }).format(value));
+  }
+
   // Angle in degrees, clamped to the arc.
   function markerAngle (value, min, max) {
     const fraction = Math.min(Math.max((value - min) / (max - min), 0), 1);
@@ -104,6 +115,7 @@
     bandIndex,
     segmentGeometry,
     bandProblems,
+    roundToDecimals,
     markerAngle
   };
 });

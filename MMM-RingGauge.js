@@ -293,7 +293,11 @@ Module.register("MMM-RingGauge", {
     // Without any valid value the gauge shows "—" whatever the cause.
     const unavailable = value !== null && lost;
     const unit = this.settings.unit ?? (this.lastValid === null ? this.config.unit : this.lastValid.unit);
-    const band = value === null ? -1 : RingGaugeLogic.bandIndex(this.bands, value, this.settings.max);
+    // Assessed as shown, so that one number never gets two status words;
+    // the marker keeps the exact value.
+    const band = value === null
+      ? -1
+      : RingGaugeLogic.bandIndex(this.bands, RingGaugeLogic.roundToDecimals(value, this.config.decimals), this.settings.max);
     const state = { value, unavailable, band, unit };
     if (Object.keys(state).every((key) => state[key] === this.rendered[key])) {
       return;

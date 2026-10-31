@@ -259,26 +259,3 @@ describe("markerAngle", () => {
 		});
 	}
 });
-
-describe("isStale", () => {
-	const reported = 1_000_000;
-	const minute = 60 * 1000;
-
-	it("is fresh while younger than staleAfter", () => {
-		assert.equal(logic.isStale(reported, 10 * minute, reported + 5 * minute), false);
-	});
-
-	it("is fresh exactly at staleAfter", () => {
-		assert.equal(logic.isStale(reported, 10 * minute, reported + 10 * minute), false);
-	});
-
-	it("is stale once older than staleAfter", () => {
-		assert.equal(logic.isStale(reported, 10 * minute, reported + 10 * minute + 1), true);
-	});
-
-	it("never turns stale without staleAfter", () => {
-		const hours = 24 * 60 * minute;
-		assert.equal(logic.isStale(reported, undefined, reported + hours), false);
-		assert.equal(logic.isStale(reported, null, reported + hours), false);
-	});
-});

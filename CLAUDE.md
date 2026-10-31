@@ -11,12 +11,16 @@ deviation in its last section.
 
 ## Target architecture
 
-- The module is a passive consumer: it reacts to notifications that carry
-  readings and fetches nothing itself.
-- The provider (e.g. MMM-HomeAssistantDataProvider) owns the contract.
-  Do not add fields to readings here; change the contract there.
-- The interim `node_helper.js` that polls Home Assistant is to be removed
-  once the provider exists. Do not extend it.
+- The module is independent of any data source: it reacts to
+  notifications that carry readings and fetches nothing itself.
+- It works with every source that sends a notification. The gauge defines
+  its input fields; each instance's config maps a source onto them.
+- Never name a source's notification or payload fields in the code, not
+  even as a default: that binds the gauge to one source.
+- Never ask a source to change its payload for this module; map it in the
+  config instead.
+- The interim `node_helper.js` that polls Home Assistant is to be removed.
+  Do not extend it.
 
 ## Rules
 
@@ -28,10 +32,10 @@ deviation in its last section.
   mirror send the token to their own server.
 - Treat every socket message from the browser as untrusted: accept only
   names that the server-side config lists.
-- Readings carry facts only: name, value, unit, quantity, report time,
+- Readings carry facts only: value, unit, quantity, report time,
   availability. Scale, bands, label, icon and status texts belong to this
-  module's config. Never expect a level or assessment from the provider:
-  it would have to know thresholds and couple to this module.
+  module's config. Never expect a level or assessment from a source: it
+  would have to know thresholds and couple to this module.
 - Build the DOM once; update existing elements. Do not call
   `updateDom()` for a new value: replacing the DOM breaks the marker
   movement.
@@ -57,7 +61,8 @@ deviation in its last section.
 
 ## Open
 
-- **Open:** notification contract (owned by the provider).
+- **Open:** options that map a source onto the gauge's fields (paths,
+  transformation function).
 - **Open:** presets per quantity in the module vs. full config per
   instance (proposed: presets in the module, overridable).
 - **Open:** status texts in the config or as translation keys per level.

@@ -9,13 +9,19 @@ The gauge stays readable on busy background photos thanks to a soft dark
 halo, and takes the mirror's font, so it fits themes such as
 [WallberryTheme](https://github.com/raywo/WallberryTheme).
 
-> **Open – data source.** The module is meant to be passive: it receives
-> readings as notifications from a provider module such as
-> [MMM-HomeAssistantDataProvider](https://github.com/raywo/MMM-HomeAssistantDataProvider)
-> and fetches nothing itself. Until that is implemented, the module polls
-> one Home Assistant entity per instance over the REST API in its
-> `node_helper.js`. The options marked "(to be removed)" belong to that
-> interim data source.
+## Data sources
+
+The gauge is independent of any data source. It fetches nothing itself
+and knows no source by name: it shows readings from any module that sends
+them as MagicMirror² notifications, e.g.
+[MMM-HomeAssistantDataProvider](https://github.com/raywo/MMM-HomeAssistantDataProvider).
+The config of each instance names the notification to listen to and maps
+its payload onto the gauge's fields: value, unit, quantity, report time
+and availability.
+
+> **Open – not implemented.** The module still polls one Home Assistant
+> entity per instance over the REST API in its `node_helper.js`. The
+> options marked "(to be removed)" belong to that interim data source.
 
 ## Installation
 
@@ -104,9 +110,9 @@ The full visual specification is in [docs/design.md](docs/design.md).
 
 ## Open questions
 
-- **Open – notification contract:** name of the notification, payload
-  fields and how a gauge asks for the current reading after start. The
-  contract is defined in MMM-HomeAssistantDataProvider; see there.
+- **Open – mapping a source:** the options that name the notification,
+  select the reading and map the payload onto the gauge's fields, by
+  paths or by a transformation function.
 - **Open – presets per quantity:** whether the module ships presets for
   CO₂, humidity and temperature (range, bands, icon, status texts via
   `translations/`), so that a typical instance only names its reading.

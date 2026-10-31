@@ -27,6 +27,6 @@
 		}
 	},
 	"javascript": {
-		"globals": ["Module", "Log", "config"]
+		"globals": ["Module", "Log", "config", "RingGaugeLogic"]
 	}
 }

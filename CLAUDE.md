@@ -96,6 +96,4 @@ and users install by `git clone` only.
 - **Open:** presets per quantity in the module vs. full config per
   instance (proposed: presets in the module, overridable).
 - **Open:** status texts in the config or as translation keys per level.
-- **Open:** tests for the pure logic (band lookup, angle, staleness);
-  needs that logic separated from the DOM.
 - **Open:** a `CHANGELOG.md` and a screenshot for the module list.

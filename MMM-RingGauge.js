@@ -151,7 +151,7 @@ Module.register("MMM-RingGauge", {
     const value = this.reading && Number.isFinite(this.reading.value) ? this.reading.value : null;
     const stale = value !== null
       && RingGaugeLogic.isStale(this.reading.reportedAt, this.config.staleAfter, Date.now());
-    const band = value === null ? -1 : RingGaugeLogic.bandIndex(this.bands, value);
+    const band = value === null ? -1 : RingGaugeLogic.bandIndex(this.bands, value, this.config.max);
     const state = { value, stale, band };
     if (Object.keys(state).every((key) => state[key] === this.rendered[key])) {
       return;

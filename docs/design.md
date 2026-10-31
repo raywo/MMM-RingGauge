@@ -165,6 +165,7 @@ Humidity, range 20–80 %:
 - **Active band while stale:** not specified; the band of the last value
   stays active.
 - **Invalid bands:** not specified. Without bands the gauge shows value
-  and marker but no segment and no status word. A band narrower than the
-  gap gets the dash length `max(f_i · L − 5, 0)` instead of a negative
-  one.
+  and marker but no segment and no status word. Beyond drawn bands that
+  end before `max`, a value takes no band and shows no status word. A
+  band narrower than the gap gets the dash length `max(f_i · L − 5, 0)`
+  instead of a negative one.

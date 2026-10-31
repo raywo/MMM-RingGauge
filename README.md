@@ -87,9 +87,11 @@ once as an error in the browser console, named by its `label` (or its
 `entity` without one): no bands, a `to` that is not a number or does not
 ascend, bands ending before `max`, a `level` other than `good`, `warn` or
 `bad`. Without bands, no segment is drawn and no status word is shown. A
-band whose `to` is not a number is left out. A band with an unknown
-level leaves a gap in the ring, and its text is shown uncolored. A band
-narrower than the 5-unit gap between segments is not drawn.
+band whose `to` is not a number is left out. If the drawn bands end
+before `max`, a value from their end on takes no band and shows no status
+word. A band with an unknown level leaves a gap in the ring, and its
+text is shown uncolored. A band narrower than the 5-unit gap between
+segments is not drawn.
 
 Without a value the gauge shows "—" and no marker. A reading older than
 `staleAfter` is dimmed and labeled "veraltet" (stale).

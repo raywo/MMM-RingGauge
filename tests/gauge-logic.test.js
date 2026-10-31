@@ -78,12 +78,24 @@ describe("bandIndex", () => {
 	];
 	for (const [name, gauge, value, expected] of cases) {
 		it(`${name} (${value}) takes band ${expected}`, () => {
-			assert.equal(logic.bandIndex(gauge.bands, value), expected);
+			assert.equal(logic.bandIndex(gauge.bands, value, gauge.max), expected);
 		});
 	}
 
 	it("returns -1 without bands", () => {
-		assert.equal(logic.bandIndex([], 50), -1);
+		assert.equal(logic.bandIndex([], 50, 100), -1);
+	});
+
+	it("returns -1 beyond bands that end before max", () => {
+		const bands = [{to: 1000, level: "good"}, {to: 2000, level: "warn"}];
+		assert.equal(logic.bandIndex(bands, 1500, 2500), 1);
+		assert.equal(logic.bandIndex(bands, 2000, 2500), -1);
+		assert.equal(logic.bandIndex(bands, 3000, 2500), -1);
+	});
+
+	it("gives values beyond max to a last band beyond max", () => {
+		const bands = [{to: 50, level: "good"}, {to: 120, level: "bad"}];
+		assert.equal(logic.bandIndex(bands, 130, 100), 1);
 	});
 });
 
@@ -203,6 +215,14 @@ describe("bandProblems", () => {
 	it("reports a `to` that is not a number", () => {
 		const bands = [{to: "50", level: "good"}, {to: 100, level: "bad"}];
 		assert.deepEqual(logic.bandProblems(bands, 100), ["band 0: `to` is not a number"]);
+	});
+
+	it("reports bands that end before max after a last `to` that is not a number", () => {
+		const bands = [{to: 50, level: "good"}, {To: 100, level: "bad"}];
+		assert.deepEqual(logic.bandProblems(bands, 100), [
+			"band 1: `to` is not a number",
+			"bands end at 50, before max 100"
+		]);
 	});
 
 	it("reports a band that is not an object", () => {

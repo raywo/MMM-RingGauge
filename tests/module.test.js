@@ -251,6 +251,25 @@ describe(MODULE_NAME, () => {
 			}
 		});
 
+		it("shows no band beyond a dropped last band", () => {
+			const bands = [
+				{to: 50, level: "good", text: "Good"},
+				{To: 100, level: "bad", text: "Bad"}
+			];
+			const {instance, logged} = startInstance({entity: "sensor.x", label: "X", bands});
+			receive(instance, 90);
+			const root = instance.getDom();
+			const status = root.find("ring-gauge-status");
+			assert.equal(status.textContent, "");
+			assert.equal(status.className, "ring-gauge-status");
+			assert.equal(root.find("ring-gauge-segment").classes.has("ring-gauge-active"), false);
+			assert.equal(root.find("ring-gauge-value").textContent, "90");
+			assert.deepEqual(
+				logged.map((entry) => entry.message),
+				[`${MODULE_NAME} (X): band 1: \`to\` is not a number`, `${MODULE_NAME} (X): bands end at 50, before max 100`]
+			);
+		});
+
 		it("logs nothing for valid bands", () => {
 			const bands = [
 				{to: 50, level: "good", text: "Good"},

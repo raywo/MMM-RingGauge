@@ -22,10 +22,16 @@
   const SEGMENT_GAP = 5;
 
   // Values beyond the range take the outermost band. A value equal to a
-  // band's `to` belongs to the next band. Without bands, -1.
-  function bandIndex (bands, value) {
+  // band's `to` belongs to the next band. Without bands, -1. Bands that
+  // end before max cover no value from their end on: -1, so that no other
+  // band's status stands for it.
+  function bandIndex (bands, value, max) {
     const index = bands.findIndex((band) => value < band.to);
-    return index === -1 ? bands.length - 1 : index;
+    if (index !== -1) {
+      return index;
+    }
+    const last = bands[bands.length - 1];
+    return last !== undefined && last.to >= max ? bands.length - 1 : -1;
   }
 
   // Dash length and dash offset of each band's segment along the arc. A
@@ -73,9 +79,10 @@
           + ", expected one of " + LEVELS.join(", "));
       }
     });
-    const last = bands[bands.length - 1];
-    if (last !== null && typeof last === "object" && Number.isFinite(last.to) && last.to < max) {
-      problems.push("bands end at " + last.to + ", before max " + max);
+    // The end of the last band with a numeric `to`: the gauge draws only
+    // those, so a later band without one does not reach max either.
+    if (previous !== null && previous < max) {
+      problems.push("bands end at " + previous + ", before max " + max);
     }
     return problems;
   }

@@ -5,14 +5,6 @@
  */
 
 const SVG_NS = "http://www.w3.org/2000/svg";
-
-// Geometry in SVG user units; the SVG scales with --ring-gauge-size.
-const CENTER = 105;
-const RADIUS = 78;
-const START_ANGLE = 135;
-const SWEEP = 270;
-const ARC_LENGTH = 2 * Math.PI * RADIUS * (SWEEP / 360);
-const SEGMENT_GAP = 5;
 const MARKER_DURATION = 600;
 
 // Outline icons on a 24 × 24 grid, stroked with currentColor.
@@ -39,6 +31,11 @@ Module.register("MMM-RingGauge", {
     decimals: 0,
     updateInterval: 30 * 1000,
     staleAfter: 10 * 60 * 1000
+  },
+
+  // Band lookup, geometry and staleness, as the global RingGaugeLogic.
+  getScripts () {
+    return [this.file("gauge-logic.js")];
   },
 
   getStyles () {
@@ -80,20 +77,17 @@ Module.register("MMM-RingGauge", {
     const root = document.createElement("div");
     root.className = "ring-gauge";
 
+    const { CENTER, RADIUS, START_ANGLE } = RingGaugeLogic;
     const svg = this.svgElement("svg", { class: "ring-gauge-scale", viewBox: "0 0 210 210" });
-    const span = this.config.max - this.config.min;
-    let from = this.config.min;
-    const segments = this.config.bands.map((band) => {
-      const share = (Math.min(band.to, this.config.max) - from) / span;
-      const offset = (from - this.config.min) / span;
-      from = band.to;
+    const geometry = RingGaugeLogic.segmentGeometry(this.config.bands, this.config.min, this.config.max);
+    const segments = this.config.bands.map((band, index) => {
       const segment = this.svgElement("circle", {
         class: "ring-gauge-segment ring-gauge-" + band.level,
         cx: CENTER,
         cy: CENTER,
         r: RADIUS,
-        "stroke-dasharray": (share * ARC_LENGTH - SEGMENT_GAP) + " 1000",
-        "stroke-dashoffset": -(offset * ARC_LENGTH + SEGMENT_GAP / 2),
+        "stroke-dasharray": geometry[index].dashLength + " 1000",
+        "stroke-dashoffset": geometry[index].dashOffset,
         transform: "rotate(" + START_ANGLE + " " + CENTER + " " + CENTER + ")"
       });
       svg.appendChild(segment);
@@ -139,16 +133,11 @@ Module.register("MMM-RingGauge", {
     return element;
   },
 
-  // Values beyond the range take the outermost band.
-  bandIndex (value) {
-    const index = this.config.bands.findIndex((band) => value < band.to);
-    return index === -1 ? this.config.bands.length - 1 : index;
-  },
-
   render () {
     const value = this.reading && Number.isFinite(this.reading.value) ? this.reading.value : null;
-    const stale = value !== null && Date.now() - this.reading.reportedAt > this.config.staleAfter;
-    const band = value === null ? -1 : this.bandIndex(value);
+    const stale = value !== null
+      && RingGaugeLogic.isStale(this.reading.reportedAt, this.config.staleAfter, Date.now());
+    const band = value === null ? -1 : RingGaugeLogic.bandIndex(this.config.bands, value);
     const state = { value, stale, band };
     if (Object.keys(state).every((key) => state[key] === this.rendered[key])) {
       return;
@@ -180,14 +169,13 @@ Module.register("MMM-RingGauge", {
 
     marker.style.display = value === null ? "none" : "";
     if (value !== null) {
-      const span = this.config.max - this.config.min;
-      const fraction = Math.min(Math.max((value - this.config.min) / span, 0), 1);
-      this.moveMarker(START_ANGLE + fraction * SWEEP);
+      this.moveMarker(RingGaugeLogic.markerAngle(value, this.config.min, this.config.max));
     }
   },
 
   // Moves along the arc: the angle is interpolated, not the position.
   moveMarker (target) {
+    const { CENTER, RADIUS } = RingGaugeLogic;
     const place = (angle) => {
       const radians = angle * Math.PI / 180;
       this.dom.marker.setAttribute("cx", (CENTER + RADIUS * Math.cos(radians)).toFixed(2));

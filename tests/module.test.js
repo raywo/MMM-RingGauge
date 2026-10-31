@@ -58,6 +58,14 @@ describe(MODULE_NAME, () => {
 		assert.deepEqual(Object.keys(loadModule()), [MODULE_NAME]);
 	});
 
+	it("loads its logic file through getScripts()", () => {
+		const definition = loadModule()[MODULE_NAME];
+		const scripts = definition.getScripts.call({file: (name) => name});
+		// Copied: an array from the vm context has another prototype.
+		assert.deepEqual([...scripts], ["gauge-logic.js"]);
+		assert.ok(fs.existsSync(path.join(REPO_ROOT, scripts[0])));
+	});
+
 	it("has a node_helper created through MagicMirror²'s NodeHelper", () => {
 		const {exports, created} = loadNodeHelper();
 		assert.equal(created.length, 1);

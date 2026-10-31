@@ -7,6 +7,7 @@
   --ring-gauge-text: #f5f5f5;
   --ring-gauge-label: rgba(255, 255, 255, 0.8);
   --ring-gauge-unit: rgba(255, 255, 255, 0.7);
+  --ring-gauge-unavailable: var(--ring-gauge-warn);
   --ring-gauge-gap: 48px;
 }
 
@@ -155,7 +156,13 @@
   stroke-opacity: 0.5;
 }
 
+/* The symbol is the only sign that the value is not current, so it is
+   larger than the status word and takes a signal color. The negative
+   margins keep the 18 px of the status line (4 px above, 14 px high), so
+   the value does not move when the gauge dims. */
 .ring-gauge-unavailable-icon {
-  margin-top: 4px;
-  color: var(--ring-gauge-unit);
+  width: 24px;
+  height: 24px;
+  margin: -1px 0 -5px;
+  color: var(--ring-gauge-unavailable);
 }

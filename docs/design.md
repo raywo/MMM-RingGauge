@@ -201,3 +201,10 @@ German ones.
   before the first valid reading: the gauge shows "—" without segments,
   icon, label or unit. Setting `quantity` as a fallback draws the
   segments at opacity 0.3 as specified.
+- **"Link broken" symbol:** the specification asks for 16 × 16 px in the
+  unit color with 4 px space above. At mirror distance that grey glyph
+  draws less attention than the dimmed value, though it is the only sign
+  that the value is not current. The symbol is 24 × 24 px in the custom
+  property `--ring-gauge-unavailable`, by default the `warn` color, and
+  takes the 18 px of the status line, so the value does not move when
+  the gauge dims.

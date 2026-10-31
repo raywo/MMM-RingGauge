@@ -68,6 +68,10 @@ The module has no dependencies.
 | `updateInterval` | `30000` | number | Polling interval in ms (to be removed). |
 | `staleAfter` | `600000` | number | Age in ms after which a reading counts as stale. |
 
+The `node_helper` reads `host`, `port`, `useTLS`, `token` and
+`updateInterval` from the server-side config only and polls only entities
+configured there; the browser cannot redirect the token to another host.
+
 Values outside `min`–`max` keep the marker at the end of the arc, show
 the correct number and take the outermost band.
 

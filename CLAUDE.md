@@ -20,6 +20,14 @@ deviation in its last section.
 
 ## Rules
 
+- A `node_helper` takes host, port, token and the list of entities from
+  the server-side config (`global.config.modules`, or
+  `getServerModuleConfig()` for single-instance modules), never from a
+  socket message. MagicMirror restores `SECRET_*` placeholders in every
+  socket message, so a host from the browser lets anyone who can open the
+  mirror send the token to their own server.
+- Treat every socket message from the browser as untrusted: accept only
+  names that the server-side config lists.
 - Readings carry facts only: name, value, unit, quantity, report time,
   availability. Scale, bands, label, icon and status texts belong to this
   module's config. Never expect a level or assessment from the provider:

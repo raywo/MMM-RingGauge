@@ -57,21 +57,15 @@ Module.register("MMM-RingGauge", {
     this.markerAngle = null;
     this.rendered = {};
     this.dom = this.buildDom();
-    this.sendSocketNotification("RING_GAUGE_START", {
-      identifier: this.identifier,
-      host: this.config.host,
-      port: this.config.port,
-      useTLS: this.config.useTLS,
-      token: this.config.token,
-      entity: this.config.entity,
-      updateInterval: this.config.updateInterval
-    });
+    // Only the entity: the helper takes the connection from the
+    // server-side config, never from the browser.
+    this.sendSocketNotification("RING_GAUGE_START", { entity: this.config.entity });
     // A reading turns stale without any new message.
     setInterval(() => this.render(), 30 * 1000);
   },
 
   socketNotificationReceived (notification, payload) {
-    if (notification === "RING_GAUGE_READING" && payload.identifier === this.identifier) {
+    if (notification === "RING_GAUGE_READING" && payload.entity === this.config.entity) {
       this.reading = payload;
       this.render();
     }

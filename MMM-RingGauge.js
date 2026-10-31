@@ -50,6 +50,7 @@ Module.register("MMM-RingGauge", {
   },
 
   start () {
+    this.bands = this.validBands();
     this.reading = null;
     this.markerAngle = null;
     this.rendered = {};
@@ -79,8 +80,8 @@ Module.register("MMM-RingGauge", {
 
     const { CENTER, RADIUS, START_ANGLE } = RingGaugeLogic;
     const svg = this.svgElement("svg", { class: "ring-gauge-scale", viewBox: "0 0 210 210" });
-    const geometry = RingGaugeLogic.segmentGeometry(this.config.bands, this.config.min, this.config.max);
-    const segments = this.config.bands.map((band, index) => {
+    const geometry = RingGaugeLogic.segmentGeometry(this.bands, this.config.min, this.config.max);
+    const segments = this.bands.map((band, index) => {
       const segment = this.svgElement("circle", {
         class: "ring-gauge-segment ring-gauge-" + band.level,
         cx: CENTER,
@@ -118,6 +119,19 @@ Module.register("MMM-RingGauge", {
     return { root, segments, marker, value, status };
   },
 
+  // Logs each configuration error of the bands once and returns the bands
+  // the gauge can draw. Invalid bands do not stop the value and marker.
+  validBands () {
+    const name = this.config.label || this.config.entity;
+    for (const problem of RingGaugeLogic.bandProblems(this.config.bands, this.config.max)) {
+      Log.error(this.name + " (" + name + "): " + problem);
+    }
+    const bands = Array.isArray(this.config.bands) ? this.config.bands : [];
+    // Without a numeric `to`, the band has no place on the arc, and the
+    // following segments would get NaN geometry.
+    return bands.filter((band) => band !== null && typeof band === "object" && Number.isFinite(band.to));
+  },
+
   svgElement (name, attributes) {
     const element = document.createElementNS(SVG_NS, name);
     for (const [key, value] of Object.entries(attributes)) {
@@ -137,7 +151,7 @@ Module.register("MMM-RingGauge", {
     const value = this.reading && Number.isFinite(this.reading.value) ? this.reading.value : null;
     const stale = value !== null
       && RingGaugeLogic.isStale(this.reading.reportedAt, this.config.staleAfter, Date.now());
-    const band = value === null ? -1 : RingGaugeLogic.bandIndex(this.config.bands, value);
+    const band = value === null ? -1 : RingGaugeLogic.bandIndex(this.bands, value, this.config.max);
     const state = { value, stale, band };
     if (Object.keys(state).every((key) => state[key] === this.rendered[key])) {
       return;
@@ -162,9 +176,15 @@ Module.register("MMM-RingGauge", {
       status.textContent = "";
     } else if (stale) {
       status.textContent = this.translate("STALE");
+    } else if (band === -1) {
+      // Without bands there is no assessment; value and marker still show.
+      status.textContent = "";
     } else {
-      status.textContent = this.config.bands[band].text;
-      status.classList.add("ring-gauge-" + this.config.bands[band].level);
+      const { text, level } = this.bands[band];
+      status.textContent = text ?? "";
+      if (RingGaugeLogic.LEVELS.includes(level)) {
+        status.classList.add("ring-gauge-" + level);
+      }
     }
 
     marker.style.display = value === null ? "none" : "";

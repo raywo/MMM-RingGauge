@@ -78,12 +78,24 @@ describe("bandIndex", () => {
 	];
 	for (const [name, gauge, value, expected] of cases) {
 		it(`${name} (${value}) takes band ${expected}`, () => {
-			assert.equal(logic.bandIndex(gauge.bands, value), expected);
+			assert.equal(logic.bandIndex(gauge.bands, value, gauge.max), expected);
 		});
 	}
 
 	it("returns -1 without bands", () => {
-		assert.equal(logic.bandIndex([], 50), -1);
+		assert.equal(logic.bandIndex([], 50, 100), -1);
+	});
+
+	it("returns -1 beyond bands that end before max", () => {
+		const bands = [{to: 1000, level: "good"}, {to: 2000, level: "warn"}];
+		assert.equal(logic.bandIndex(bands, 1500, 2500), 1);
+		assert.equal(logic.bandIndex(bands, 2000, 2500), -1);
+		assert.equal(logic.bandIndex(bands, 3000, 2500), -1);
+	});
+
+	it("gives values beyond max to a last band beyond max", () => {
+		const bands = [{to: 50, level: "good"}, {to: 120, level: "bad"}];
+		assert.equal(logic.bandIndex(bands, 130, 100), 1);
 	});
 });
 
@@ -133,6 +145,98 @@ describe("segmentGeometry", () => {
 
 	it("draws nothing without bands", () => {
 		assert.deepEqual(logic.segmentGeometry([], 0, 100), []);
+	});
+
+	it("draws a band narrower than the gap with length 0", () => {
+		// 1 of 1000 is 0.37 units of the arc, less than the 5 unit gap.
+		const bands = [{to: 1}, {to: 1000}];
+		const actual = logic.segmentGeometry(bands, 0, 1000);
+		assert.equal(actual[0].dashLength, 0);
+		assertClose(actual[1].dashLength, (999 / 1000) * L - 5, "dash length of the wide segment");
+	});
+
+	it("draws a band that does not ascend with length 0", () => {
+		const bands = [{to: 60}, {to: 40}, {to: 100}];
+		const actual = logic.segmentGeometry(bands, 0, 100);
+		assert.equal(actual[1].dashLength, 0);
+	});
+});
+
+describe("bandProblems", () => {
+	it("finds none in the bands of the design", () => {
+		assert.deepEqual(logic.bandProblems(CO2.bands, CO2.max), []);
+		assert.deepEqual(logic.bandProblems(HUMIDITY.bands, HUMIDITY.max), []);
+	});
+
+	it("accepts a last band beyond max", () => {
+		const bands = [{to: 50, level: "good"}, {to: 120, level: "bad"}];
+		assert.deepEqual(logic.bandProblems(bands, 100), []);
+	});
+
+	it("reports missing bands once", () => {
+		assert.deepEqual(logic.bandProblems([], 100), ["no bands configured"]);
+		assert.deepEqual(logic.bandProblems(undefined, 100), ["no bands configured"]);
+		assert.deepEqual(logic.bandProblems({to: 100}, 100), ["no bands configured"]);
+	});
+
+	it("reports bands that do not ascend", () => {
+		const bands = [
+			{to: 60, level: "good"},
+			{to: 40, level: "warn"},
+			{to: 100, level: "bad"}
+		];
+		assert.deepEqual(logic.bandProblems(bands, 100), ["band 1: `to` 40 does not ascend from 60"]);
+	});
+
+	it("reports a band equal to the one before", () => {
+		const bands = [{to: 50, level: "good"}, {to: 50, level: "warn"}, {to: 100, level: "bad"}];
+		assert.deepEqual(logic.bandProblems(bands, 100), ["band 1: `to` 50 does not ascend from 50"]);
+	});
+
+	it("reports bands that end before max", () => {
+		const bands = [{to: 1000, level: "good"}, {to: 2000, level: "warn"}];
+		assert.deepEqual(logic.bandProblems(bands, 2500), ["bands end at 2000, before max 2500"]);
+	});
+
+	it("reports an unknown level", () => {
+		const bands = [{to: 50, level: "good"}, {to: 100, level: "critical"}];
+		assert.deepEqual(logic.bandProblems(bands, 100), [
+			'band 1: unknown level "critical", expected one of good, warn, bad'
+		]);
+	});
+
+	it("reports a missing level", () => {
+		const bands = [{to: 100}];
+		assert.deepEqual(logic.bandProblems(bands, 100), [
+			"band 0: unknown level undefined, expected one of good, warn, bad"
+		]);
+	});
+
+	it("reports a `to` that is not a number", () => {
+		const bands = [{to: "50", level: "good"}, {to: 100, level: "bad"}];
+		assert.deepEqual(logic.bandProblems(bands, 100), ["band 0: `to` is not a number"]);
+	});
+
+	it("reports bands that end before max after a last `to` that is not a number", () => {
+		const bands = [{to: 50, level: "good"}, {To: 100, level: "bad"}];
+		assert.deepEqual(logic.bandProblems(bands, 100), [
+			"band 1: `to` is not a number",
+			"bands end at 50, before max 100"
+		]);
+	});
+
+	it("reports a band that is not an object", () => {
+		const bands = [null, {to: 100, level: "bad"}];
+		assert.deepEqual(logic.bandProblems(bands, 100), ["band 0 is not an object"]);
+	});
+
+	it("reports every problem of one configuration", () => {
+		const bands = [{to: 60, level: "good"}, {to: 40, level: "red"}];
+		assert.deepEqual(logic.bandProblems(bands, 100), [
+			"band 1: `to` 40 does not ascend from 60",
+			'band 1: unknown level "red", expected one of good, warn, bad',
+			"bands end at 40, before max 100"
+		]);
 	});
 });
 

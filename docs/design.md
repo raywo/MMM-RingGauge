@@ -164,3 +164,7 @@ Humidity, range 20–80 %:
   `--ring-gauge-scrim`, so that a theme can tint it.
 - **Active band while stale:** not specified; the band of the last value
   stays active.
+- **Invalid bands:** not specified. Without bands the gauge shows value
+  and marker but no segment and no status word. A band narrower than the
+  gap gets the dash length `max(f_i · L − 5, 0)` instead of a negative
+  one.

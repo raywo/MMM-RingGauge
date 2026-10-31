@@ -61,6 +61,8 @@ the connection changes:
       quantity: "quantity",
       available: "available"
     },
+    quantity: "carbon_dioxide",
+    unit: "ppm",
     connection: {
       notification: "HOME_ASSISTANT_CONNECTION",
       connected: "connected",
@@ -72,7 +74,10 @@ the connection changes:
 
 The provider sends the quantity, here `carbon_dioxide`, so the gauge
 takes scale, bands, icon, label and status texts from its
-[preset](#presets).
+[preset](#presets). `quantity` and `unit` are fallbacks: they draw the
+preset from the start, before the first reading arrives, and the
+payload's quantity and unit still win. Without them, the gauge shows
+only "—" until then, and several gauges side by side look alike.
 
 `graceAfter: 30000` matches the provider's own delay: it marks its
 readings `available: false` only after 30 s without connection, so the

@@ -196,3 +196,8 @@ German ones.
   follow the value as shown, rounded to `decimals`, so that one number
   never shows two status words: 59.6 % shows as "60" and takes the band
   from 60 on. The marker keeps the exact value.
+- **No value yet without a quantity:** when the quantity comes only from
+  the payload and the config sets no `quantity`, there is no preset
+  before the first valid reading: the gauge shows "—" without segments,
+  icon, label or unit. Setting `quantity` as a fallback draws the
+  segments at opacity 0.3 as specified.

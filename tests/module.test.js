@@ -588,6 +588,17 @@ describe(MODULE_NAME, () => {
 			assert.deepEqual(logged, []);
 		});
 
+		it("draws the preset of a fallback `quantity` before the first reading; the payload's quantity wins", () => {
+			const {instance, logged} = startInstance(
+				{...READING, fields: {value: "value", quantity: "kind", unit: "unit"}, quantity: "carbon_dioxide", unit: "ppm"},
+				{language: "en"}
+			);
+			assert.deepEqual([label(instance), segments(instance), shown(instance).value, shown(instance).unit], ["CO₂", 3, "—", "ppm"]);
+			instance.notificationReceived("TEST_READING", {id: "x", value: 45, kind: "humidity", unit: "%"});
+			assert.deepEqual([label(instance), segments(instance), shown(instance).status], ["Humidity", 4, "Optimal"]);
+			assert.deepEqual(logged, []);
+		});
+
 		it("assesses the value it shows: rounded to `decimals`, the marker stays exact", () => {
 			// 59.6 % shows as "60", which belongs to the band from 60 on.
 			const {instance} = startInstance({...READING, quantity: "humidity", unit: "%"}, {language: "en"});

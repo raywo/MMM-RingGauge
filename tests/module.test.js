@@ -699,6 +699,17 @@ describe(MODULE_NAME, () => {
 			}
 		});
 
+		it("gives a °F reading at a band limit the same status on a metric and an imperial mirror", () => {
+			for (const [reading, status] of [[60.8, "Cool"], [80.6, "Too warm"]]) {
+				const metric = startInstance({...TEMPERATURE, unit: "°F"}, {units: "metric", language: "en"}).instance;
+				const imperial = startInstance({...TEMPERATURE, unit: "°F"}, {units: "imperial", language: "en"}).instance;
+				receive(metric, reading);
+				receive(imperial, reading);
+				assert.equal(shown(metric).status, status, String(reading));
+				assert.equal(shown(imperial).status, status, String(reading));
+			}
+		});
+
 		it("follows the `units` option over the mirror's `units`", () => {
 			const {instance} = startInstance({...TEMPERATURE, units: "imperial"}, {units: "metric"});
 			receive(instance, 20);

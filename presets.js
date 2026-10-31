@@ -72,11 +72,14 @@
     return system === undefined ? null : system;
   }
 
+  // Rounded to nine decimals: without it, 60.8 °F becomes
+  // 15.999999999999998 °C and falls into the band below 16 °C.
   function convertTemperature (value, from, to) {
     if (from === to) {
       return value;
     }
-    return to === "imperial" ? value * 1.8 + 32 : (value - 32) / 1.8;
+    const converted = to === "imperial" ? value * 1.8 + 32 : (value - 32) / 1.8;
+    return Math.round(converted * 1e9) / 1e9;
   }
 
   // Which part of a reading the settings depend on: its quantity, and for

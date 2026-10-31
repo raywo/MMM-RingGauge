@@ -11,6 +11,13 @@ describe("convertTemperature", () => {
 		assert.equal(convertTemperature(50, "imperial", "metric"), 10);
 		assert.equal(convertTemperature(21.5, "metric", "metric"), 21.5);
 	});
+
+	it("hits the band limits exactly in both directions", () => {
+		for (const [celsius, fahrenheit] of [[16, 60.8], [27, 80.6]]) {
+			assert.equal(convertTemperature(fahrenheit, "imperial", "metric"), celsius);
+			assert.equal(convertTemperature(celsius, "metric", "imperial"), fahrenheit);
+		}
+	});
 });
 
 describe("temperatureSystem", () => {

@@ -1,6 +1,6 @@
 /*
-  Pure logic of MMM-RingGauge: band lookup, segment geometry, marker angle
-  and staleness. No DOM and no MagicMirror: the browser loads this file
+  Pure logic of MMM-RingGauge: band lookup, segment geometry and marker
+  angle. No DOM and no MagicMirror: the browser loads this file
   through getScripts() as the global RingGaugeLogic, tests require() it.
   The geometry follows docs/design.md, "Scale geometry".
  */
@@ -93,15 +93,6 @@
     return START_ANGLE + fraction * SWEEP;
   }
 
-  // Without staleAfter (undefined or null) a value never turns stale: a
-  // value that stays the same is valid.
-  function isStale (lastValidAt, staleAfter, now) {
-    if (staleAfter === undefined || staleAfter === null) {
-      return false;
-    }
-    return now - lastValidAt > staleAfter;
-  }
-
   return {
     CENTER,
     RADIUS,
@@ -113,7 +104,6 @@
     bandIndex,
     segmentGeometry,
     bandProblems,
-    markerAngle,
-    isStale
+    markerAngle
   };
 });

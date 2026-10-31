@@ -1,11 +1,14 @@
 /*
-  MMM-RingGauge: one Home Assistant sensor as a three-quarter ring with
-  colored bands, a marker and a status word. Several instances can show
-  different sensors.
+  MMM-RingGauge: one reading as a three-quarter ring with colored bands, a
+  marker and a status word. Several instances can show different readings.
+  Each instance takes its reading from the notification its config names;
+  the module fetches nothing and knows no source.
  */
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const MARKER_DURATION = 600;
+// setTimeout fires at once for a longer delay; a later check waits in steps.
+const MAX_TIMER_DELAY = 2 ** 31 - 1;
 
 // Outline icons on a 24 × 24 grid, stroked with currentColor.
 const ICONS = {
@@ -14,28 +17,36 @@ const ICONS = {
   temperature: "<path d='M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z'/><path d='M12 9v7'/>"
 };
 
+// Shown in place of the status word while no current value is available.
+const LINK_BROKEN = "<path d='M11.5 7.5L14 5a3.54 3.54 0 0 1 5 5l-2.5 2.5'/><path d='M12.5 16.5L10 19a3.54 3.54 0 0 1-5-5l2.5-2.5'/><path d='M8.5 8.5l-2-2M15.5 15.5l2 2M11 5V3M5 11H3M13 19v2M19 13h2'/>";
+
 Module.register("MMM-RingGauge", {
+  // A function in config.js reaches the browser only from 2.36 on.
+  requiresVersion: "2.36.0",
+
+  // No default names a source: each instance maps its own.
   defaults: {
-    host: "",
-    port: 8123,
-    useTLS: false,
-    token: "",
-    entity: "",
-    label: "",
+    notification: "",
+    match: null,
+    fields: {},
+    transform: null,
     unit: "",
+    quantity: "",
+    connection: null,
+    staleAfter: null,
+    label: "",
     icon: "",
     min: 0,
     max: 100,
     // Contiguous from min to max: [{ to, level: "good" | "warn" | "bad", text }].
     bands: [],
-    decimals: 0,
-    updateInterval: 30 * 1000,
-    staleAfter: 10 * 60 * 1000
+    decimals: 0
   },
 
-  // Band lookup, geometry and staleness, as the global RingGaugeLogic.
+  // Band lookup and geometry as the global RingGaugeLogic; mapping and
+  // availability as the global RingGaugeSource.
   getScripts () {
-    return [this.file("gauge-logic.js")];
+    return [this.file("gauge-logic.js"), this.file("source-mapping.js")];
   },
 
   getStyles () {
@@ -50,21 +61,50 @@ Module.register("MMM-RingGauge", {
   },
 
   start () {
+    this.logged = new Set();
+    for (const problem of RingGaugeSource.configProblems(this.config)) {
+      this.logOnce("config:" + problem, problem);
+    }
     this.bands = this.validBands();
-    this.reading = null;
+    this.lastValid = null;
+    this.readingUnavailable = false;
+    this.disconnectedSince = null;
+    this.timer = null;
     this.markerAngle = null;
     this.rendered = {};
     this.dom = this.buildDom();
-    // Only the entity: the helper takes the connection from the
-    // server-side config, never from the browser.
-    this.sendSocketNotification("RING_GAUGE_START", { entity: this.config.entity });
-    // A reading turns stale without any new message.
-    setInterval(() => this.render(), 30 * 1000);
   },
 
-  socketNotificationReceived (notification, payload) {
-    if (notification === "RING_GAUGE_READING" && payload.entity === this.config.entity) {
-      this.reading = payload;
+  notificationReceived (notification, payload) {
+    const now = Date.now();
+    let changed = false;
+
+    const { reading, problems } = RingGaugeSource.readNotification(this.config, notification, payload, now);
+    this.logProblems(problems);
+    if (reading !== null) {
+      changed = true;
+      if (reading.valid) {
+        this.lastValid = reading;
+        this.readingUnavailable = false;
+        // A source that delivers a valid value is connected.
+        this.disconnectedSince = null;
+      } else {
+        // Never replaces the last valid value.
+        this.readingUnavailable = true;
+      }
+    }
+
+    const connection = RingGaugeSource.readConnection(this.config.connection, notification, payload);
+    this.logProblems(connection.problems);
+    if (connection.connected === true) {
+      changed = true;
+      this.disconnectedSince = null;
+    } else if (connection.connected === false && this.disconnectedSince === null) {
+      changed = true;
+      this.disconnectedSince = now;
+    }
+
+    if (changed) {
       this.render();
     }
   },
@@ -72,6 +112,25 @@ Module.register("MMM-RingGauge", {
   getDom () {
     this.render();
     return this.dom.root;
+  },
+
+  // The name an instance goes by in the log.
+  instanceName () {
+    return this.config.label || this.config.notification || this.identifier;
+  },
+
+  logOnce (key, message) {
+    if (this.logged.has(key)) {
+      return;
+    }
+    this.logged.add(key);
+    Log.error(this.name + " (" + this.instanceName() + "): " + message);
+  },
+
+  logProblems (problems) {
+    for (const { key, message } of problems) {
+      this.logOnce(key, message);
+    }
   },
 
   buildDom () {
@@ -113,18 +172,20 @@ Module.register("MMM-RingGauge", {
     const value = this.textElement("ring-gauge-value");
     const unit = this.textElement("ring-gauge-unit", this.config.unit);
     const status = this.textElement("ring-gauge-status");
-    center.append(head, value, unit, status);
+    const unavailable = this.svgElement("svg", { class: "ring-gauge-icon ring-gauge-unavailable-icon", viewBox: "0 0 24 24" });
+    unavailable.innerHTML = LINK_BROKEN;
+    unavailable.style.display = "none";
+    center.append(head, value, unit, status, unavailable);
     root.appendChild(center);
 
-    return { root, segments, marker, value, status };
+    return { root, segments, marker, value, unit, status, unavailable };
   },
 
   // Logs each configuration error of the bands once and returns the bands
   // the gauge can draw. Invalid bands do not stop the value and marker.
   validBands () {
-    const name = this.config.label || this.config.entity;
     for (const problem of RingGaugeLogic.bandProblems(this.config.bands, this.config.max)) {
-      Log.error(this.name + " (" + name + "): " + problem);
+      this.logOnce("bands:" + problem, problem);
     }
     const bands = Array.isArray(this.config.bands) ? this.config.bands : [];
     // Without a numeric `to`, the band has no place on the arc, and the
@@ -147,19 +208,37 @@ Module.register("MMM-RingGauge", {
     return element;
   },
 
+  // Rechecks when availability can change without a notification: at the
+  // end of the grace period or when the last valid value turns stale.
+  schedule (nextCheck, now) {
+    clearTimeout(this.timer);
+    this.timer = nextCheck === null ? null : setTimeout(() => this.render(), Math.min(nextCheck - now, MAX_TIMER_DELAY));
+  },
+
   render () {
-    const value = this.reading && Number.isFinite(this.reading.value) ? this.reading.value : null;
-    const stale = value !== null
-      && RingGaugeLogic.isStale(this.reading.reportedAt, this.config.staleAfter, Date.now());
+    const now = Date.now();
+    const value = this.lastValid === null ? null : this.lastValid.value;
+    const { unavailable: lost, nextCheck } = RingGaugeSource.availability({
+      lastValid: this.lastValid,
+      readingUnavailable: this.readingUnavailable,
+      disconnectedSince: this.disconnectedSince
+    }, {
+      graceAfter: this.config.connection ? this.config.connection.graceAfter : 0,
+      staleAfter: this.config.staleAfter
+    }, now);
+    this.schedule(nextCheck, now);
+    // Without any valid value the gauge shows "—" whatever the cause.
+    const unavailable = value !== null && lost;
+    const unit = this.lastValid === null ? this.config.unit : this.lastValid.unit;
     const band = value === null ? -1 : RingGaugeLogic.bandIndex(this.bands, value, this.config.max);
-    const state = { value, stale, band };
+    const state = { value, unavailable, band, unit };
     if (Object.keys(state).every((key) => state[key] === this.rendered[key])) {
       return;
     }
     this.rendered = state;
 
     const { root, segments, marker, status } = this.dom;
-    root.classList.toggle("ring-gauge-stale", stale);
+    root.classList.toggle("ring-gauge-unavailable", unavailable);
     segments.forEach((segment, index) => {
       segment.classList.toggle("ring-gauge-active", index === band);
     });
@@ -170,13 +249,13 @@ Module.register("MMM-RingGauge", {
         maximumFractionDigits: this.config.decimals,
         useGrouping: false
       }).format(value);
+    this.dom.unit.textContent = unit;
 
+    // While unavailable the symbol takes the place of the status word.
+    status.style.display = unavailable ? "none" : "";
+    this.dom.unavailable.style.display = unavailable ? "" : "none";
     status.className = "ring-gauge-status";
-    if (value === null) {
-      status.textContent = "";
-    } else if (stale) {
-      status.textContent = this.translate("STALE");
-    } else if (band === -1) {
+    if (value === null || unavailable || band === -1) {
       // Without bands there is no assessment; value and marker still show.
       status.textContent = "";
     } else {

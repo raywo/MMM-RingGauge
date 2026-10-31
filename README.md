@@ -19,9 +19,17 @@ The config of each instance names the notification to listen to and maps
 its payload onto the gauge's fields: value, unit, quantity, report time
 and availability.
 
-> **Open – not implemented.** The module still polls one Home Assistant
-> entity per instance over the REST API in its `node_helper.js`. The
-> options marked "(to be removed)" belong to that interim data source.
+MagicMirror² sends every notification to every module. Each instance
+picks its reading by the notification name and, with `match`, by values
+in the payload.
+
+## Requirements
+
+MagicMirror² 2.36.0 or newer. Older versions drop functions from the
+config, which `transform` needs; there MagicMirror² skips the module and
+logs in the browser console: `Check MagicMirror² version for module
+'MMM-RingGauge' - Minimum version: 2.36.0`, followed by `Version is
+incorrect. Skip module: 'MMM-RingGauge'`.
 
 ## Installation
 
@@ -34,17 +42,31 @@ The module has no dependencies.
 
 ## Configuration
 
+### With MMM-HomeAssistantDataProvider
+
+The provider sends one `HOME_ASSISTANT_READING` per reading, named by
+the reading name in its own config, and `HOME_ASSISTANT_CONNECTION` when
+the connection changes:
+
 ```js
 {
   module: "MMM-RingGauge",
   position: "top_left",
   config: {
-    host: "192.168.1.10",
-    port: 8123,
-    token: "${SECRET_HOMEASSISTANT_TOKEN}",
-    entity: "sensor.living_room_co2",
+    notification: "HOME_ASSISTANT_READING",
+    match: { name: "co2" },
+    fields: {
+      value: "value",
+      unit: "unit",
+      quantity: "quantity",
+      available: "available"
+    },
+    connection: {
+      notification: "HOME_ASSISTANT_CONNECTION",
+      connected: "connected",
+      graceAfter: 30000
+    },
     label: "CO₂",
-    unit: "ppm",
     icon: "co2",
     min: 400,
     max: 2500,
@@ -57,44 +79,311 @@ The module has no dependencies.
 }
 ```
 
+`graceAfter: 30000` matches the provider's own delay: it marks its
+readings `available: false` only after 30 s without connection, so the
+gauge does not dim on a short drop while Home Assistant restarts. Without
+`connection`, the gauge dims when those readings arrive.
+
+The provider sends no report time, since Home Assistant reports no
+unchanged values; leave `staleAfter` off.
+
+### With another source, by paths
+
+A source that sends `AIR_SENSOR_UPDATE` with this payload:
+
+```json
+{
+  "sensor": { "id": "bedroom" },
+  "data": { "humidity": { "percent": "48.5" } },
+  "timestamp": "2026-01-15T07:30:00Z"
+}
+```
+
+```js
+{
+  module: "MMM-RingGauge",
+  position: "top_left",
+  config: {
+    notification: "AIR_SENSOR_UPDATE",
+    match: { "sensor.id": "bedroom" },
+    fields: {
+      value: "data.humidity.percent",
+      reportedAt: "timestamp"
+    },
+    unit: "%",
+    quantity: "humidity",
+    staleAfter: 15 * 60 * 1000,
+    label: "Humidity",
+    icon: "humidity",
+    min: 20,
+    max: 80,
+    bands: [
+      { to: 30, level: "warn", text: "Zu trocken" },
+      { to: 60, level: "good", text: "Optimal" },
+      { to: 70, level: "warn", text: "Zu feucht" },
+      { to: 80, level: "bad", text: "Viel zu feucht" }
+    ]
+  }
+}
+```
+
+This source signals no availability, so `staleAfter` dims the value once
+no update has come for 15 minutes.
+
+### Options
+
+Reading:
+
 | Option | Default | Type | Description |
 | --- | --- | --- | --- |
-| `host` | `""` | string | Home Assistant host as seen from the MagicMirror server (to be removed). |
-| `port` | `8123` | number | Home Assistant port (to be removed). |
-| `useTLS` | `false` | boolean | Use HTTPS (to be removed). |
-| `token` | `""` | string | Long-lived access token. Use a `SECRET_*` variable so it stays out of the browser (to be removed). |
-| `entity` | `""` | string | Entity ID of the sensor (to be replaced by the provider's reading name). |
+| `notification` | – | string | Required. The notification name the instance reacts to. |
+| `match` | none | object | Path–value pairs; a notification counts only if every path in its payload equals its value, e.g. `{ name: "co2" }`. Without `match`, every notification of that name counts. |
+| `fields` | `{}` | object | Dot paths into the payload for `value`, `unit`, `quantity`, `reportedAt` and `available`, e.g. `"data.co2"` or `"readings.0.value"`. |
+| `transform` | none | function | `(payload) => reading \| null`, instead of `match` and `fields`; see [Advanced: mapping function](#advanced-mapping-function). |
+| `unit` | `""` | string | Unit below the value when the mapping yields none. |
+| `quantity` | `""` | string | Quantity of the reading when the mapping yields none. |
+| `connection` | none | object | A notification that reports the connection to the source; see below. |
+| `staleAfter` | off | number | Age in ms after which the last valid value counts as unavailable. |
+
+One of `fields.value` and `transform` is required.
+
+- `value`: a number, or a string holding one (`"21.5"`).
+- `reportedAt`: epoch ms, epoch seconds or an ISO string. Without it,
+  the time the notification arrives counts.
+- `available`: `false` marks the reading as unavailable.
+
+`connection` takes `{ notification, match, connected, graceAfter }`,
+where `connected` is the path of a boolean in the payload, or
+`{ notification, transform, graceAfter }`, where `transform` returns
+`true`, `false` or `null` (says nothing). `graceAfter` (ms, default `0`)
+is how long `connected: false` has to last before the gauge counts as
+unavailable.
+
+`staleAfter` is meant for sources that signal availability neither in
+the reading nor by a connection notification. It dims any value whose
+last report is older, also one that merely stays the same: many sensors
+report only on change. Leave it off for sources that send `available`
+or a connection notification.
+
+Display:
+
+| Option | Default | Type | Description |
+| --- | --- | --- | --- |
 | `label` | `""` | string | Name above the value, shown in upper case. |
-| `unit` | `""` | string | Unit below the value. |
 | `icon` | `""` | string | `co2`, `humidity` or `temperature`; empty for none. |
 | `min` | `0` | number | Start of the scale. |
 | `max` | `100` | number | End of the scale. |
 | `bands` | `[]` | array | Bands from `min` to `max` without gaps: `{ to, level, text }`, `level` one of `good`, `warn`, `bad`. A value below `to` falls into the band. |
 | `decimals` | `0` | number | Decimal places of the value. |
-| `updateInterval` | `30000` | number | Polling interval in ms (to be removed). |
-| `staleAfter` | `600000` | number | Age in ms after which a reading counts as stale. |
 
-The `node_helper` reads `host`, `port`, `useTLS`, `token` and
-`updateInterval` from the server-side config only and polls only entities
-configured there; the browser cannot redirect the token to another host.
+### What the gauge shows
+
+Without any valid value so far, the gauge shows "—" and no marker.
+
+When no current value is available, for whatever reason, the gauge shows
+the last valid value, marker and band dimmed, and a "link broken" symbol
+in place of the status word. That happens when
+
+- the connection notification has said `connected: false` for
+  `graceAfter`,
+- a reading has `available: false` or a value that is not a number,
+- with `staleAfter` set, the last valid value is older than that.
+
+An invalid reading never replaces the last valid value. The next valid
+reading ends the state; so does `connected: true`, unless the latest
+reading said it is unavailable or the last valid value is older than
+`staleAfter`.
 
 Values outside `min`–`max` keep the marker at the end of the arc, show
 the correct number and take the outermost band.
 
-Invalid bands do not stop the gauge: it still shows the value and the
-marker. At start, each instance checks its bands and logs every problem
-once as an error in the browser console, named by its `label` (or its
-`entity` without one): no bands, a `to` that is not a number or does not
-ascend, bands ending before `max`, a `level` other than `good`, `warn` or
-`bad`. Without bands, no segment is drawn and no status word is shown. A
-band whose `to` is not a number is left out. If the drawn bands end
-before `max`, a value from their end on takes no band and shows no status
-word. A band with an unknown level leaves a gap in the ring, and its
-text is shown uncolored. A band narrower than the 5-unit gap between
+### Configuration errors
+
+Configuration errors do not stop the gauge. Each instance logs every
+problem once as an error in the browser console, named by its `label`
+(or its `notification` without one): a missing `notification`, neither
+`fields.value` nor `transform`, a path of `fields` or
+`connection.connected` that a matching payload lacks, a `transform` that
+throws or returns something other than an object or `null`. A
+notification that fails is ignored; the gauge keeps its last value.
+
+At start, each instance also checks its bands: no bands, a `to` that is
+not a number or does not ascend, bands ending before `max`, a `level`
+other than `good`, `warn` or `bad`. Invalid bands do not stop the value
+and the marker. Without bands, no segment is drawn and no status word is
+shown. A band whose `to` is not a number is left out. If the drawn bands
+end before `max`, a value from their end on takes no band and shows no
+status word. A band with an unknown level leaves a gap in the ring, and
+its text is shown uncolored. A band narrower than the 5-unit gap between
 segments is not drawn.
 
-Without a value the gauge shows "—" and no marker. A reading older than
-`staleAfter` is dimmed and labeled "veraltet" (stale).
+## Advanced: mapping function
+
+Paths cover payloads that hold the value in a fixed place. When the value
+needs work before the gauge can show it – a number inside a text, a
+reading somewhere in a list – write a mapping function instead: the
+option `transform`.
+
+`transform` receives the payload of every notification named by
+`notification` and returns either
+
+- an object with the gauge's fields, all optional except `value`:
+
+  | Field | Type |
+  | --- | --- |
+  | `value` | number, or a string holding one |
+  | `unit` | string |
+  | `quantity` | string |
+  | `reportedAt` | number (epoch ms or s) or ISO string |
+  | `available` | boolean |
+
+- or `null`, to ignore the notification, e.g. because it carries another
+  sensor's reading. With `transform`, the gauge ignores `match` and
+  `fields`; the function decides itself.
+
+`unit` and `quantity` from the options apply when the object has none.
+
+Rules for the function:
+
+- It needs MagicMirror² 2.36.0 or newer: older versions drop functions
+  from the config.
+- Write it as an arrow function, `(payload) => …`, or as
+  `function (payload) { … }`. MagicMirror² rebuilds the function in the
+  browser from its source text; the method shorthand
+  `transform (payload) { … }` cannot be rebuilt, and the gauge logs that
+  `transform` is not a function.
+- It must be self-contained. Rebuilt from its source text, it no longer
+  sees anything else in `config.js`: no variable, no helper, no import.
+- If it throws or returns something other than an object or `null`, the
+  gauge ignores that notification, keeps its last value and logs the
+  error once in the browser console. Open the console with the
+  developer tools of the browser, or start MagicMirror² with
+  `node --run start:dev`.
+
+### A value as text with its unit
+
+A source sends `MQTT_MESSAGE` with the unit inside the value:
+
+```json
+{ "topic": "home/livingroom/co2", "message": "812 ppm" }
+```
+
+```js
+{
+  module: "MMM-RingGauge",
+  position: "top_left",
+  config: {
+    notification: "MQTT_MESSAGE",
+    transform: (payload) => {
+      if (payload.topic !== "home/livingroom/co2") {
+        return null;
+      }
+      const [value, unit] = payload.message.split(" ");
+      return { value: value, unit: unit };
+    },
+    label: "CO₂",
+    icon: "co2",
+    min: 400,
+    max: 2500,
+    bands: [
+      { to: 1000, level: "good", text: "Gut" },
+      { to: 2000, level: "warn", text: "Lüften" },
+      { to: 2500, level: "bad", text: "Jetzt lüften" }
+    ]
+  }
+}
+```
+
+### Readings in a list, and the connection by a function
+
+A weather station sends all its readings in one `WEATHER_STATION`
+notification, with the report time in epoch seconds:
+
+```json
+{
+  "station": "balcony",
+  "time": 1768462200,
+  "readings": [
+    { "type": "temperature", "value": 3.4, "unit": "°C" },
+    { "type": "humidity", "value": 81, "unit": "%" }
+  ]
+}
+```
+
+It reports its state in `WEATHER_STATION_STATUS`:
+
+```json
+{ "station": "balcony", "status": "offline" }
+```
+
+`status` is `online`, `offline` or `connecting`. A path cannot turn that
+into a boolean, so `connection` takes a function too; it returns `null`
+for `connecting`, which leaves the state as it is:
+
+```js
+{
+  module: "MMM-RingGauge",
+  position: "top_left",
+  config: {
+    notification: "WEATHER_STATION",
+    transform: (payload) => {
+      const reading = payload.readings.find((entry) => entry.type === "humidity");
+      if (!reading) {
+        return null;
+      }
+      return { value: reading.value, unit: reading.unit, reportedAt: payload.time };
+    },
+    connection: {
+      notification: "WEATHER_STATION_STATUS",
+      transform: (payload) => {
+        if (payload.status === "online") {
+          return true;
+        }
+        return payload.status === "offline" ? false : null;
+      },
+      graceAfter: 60000
+    },
+    label: "Humidity",
+    icon: "humidity",
+    min: 20,
+    max: 100,
+    bands: [
+      { to: 30, level: "warn", text: "Zu trocken" },
+      { to: 60, level: "good", text: "Optimal" },
+      { to: 70, level: "warn", text: "Zu feucht" },
+      { to: 100, level: "bad", text: "Viel zu feucht" }
+    ]
+  }
+}
+```
+
+### What fails: a helper from elsewhere in `config.js`
+
+The function below calls `parsePpm`, defined at the top of `config.js`.
+That works in plain JavaScript, but not here: MagicMirror² passes only the
+function's source text to the browser, where `parsePpm` does not exist.
+
+```js
+const parsePpm = (text) => Number.parseFloat(text);
+
+let config = {
+  modules: [
+    {
+      module: "MMM-RingGauge",
+      position: "top_left",
+      config: {
+        notification: "MQTT_MESSAGE",
+        transform: (payload) => ({ value: parsePpm(payload.message) }),
+        label: "CO₂"
+      }
+    }
+  ]
+};
+```
+
+The gauge keeps showing "—", and the browser console shows once:
+``MMM-RingGauge (CO₂): `transform` threw: ReferenceError: parsePpm is not defined``.
+Write the helper's code into the function instead.
 
 ## Styling
 
@@ -122,15 +411,10 @@ The full visual specification is in [docs/design.md](docs/design.md).
 
 ## Open questions
 
-- **Open – mapping a source:** the options that name the notification,
-  select the reading and map the payload onto the gauge's fields, by
-  paths or by a transformation function.
 - **Open – presets per quantity:** whether the module ships presets for
   CO₂, humidity and temperature (range, bands, icon, status texts via
   `translations/`), so that a typical instance only names its reading.
   Proposed: yes, with each part overridable in the config.
-- **Open – unit:** the provider delivers the unit of the source; whether
-  the `unit` option stays as an override.
 - **Open – status texts:** in the config (as now) or as translation keys
   per level.
 

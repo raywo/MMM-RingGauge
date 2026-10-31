@@ -132,6 +132,12 @@ describe("readNotification by paths", () => {
 			{key: "path:available", message: 'path "reading.ok" of `fields.available` not found in SENSOR_READING'}
 		]);
 	});
+
+	it("takes a reading whose `fields.value` path is missing as invalid", () => {
+		const {reading, problems} = read({notification: "N", fields: {value: "v"}}, {battery: 80});
+		assert.equal(reading.valid, false);
+		assert.deepEqual(problems, [{key: "path:value", message: 'path "v" of `fields.value` not found in N'}]);
+	});
 });
 
 describe("readNotification with transform", () => {

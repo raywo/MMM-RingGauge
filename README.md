@@ -204,8 +204,19 @@ problem once as an error in the browser console, named by its `label`
 (or its `notification` without one): a missing `notification`, neither
 `fields.value` nor `transform`, a path of `fields` or
 `connection.connected` that a matching payload lacks, a `transform` that
-throws or returns something other than an object or `null`. A
-notification that fails is ignored; the gauge keeps its last value.
+throws or returns something other than an object or `null`.
+
+What the gauge does with such a notification:
+
+- A `transform` that fails, or a missing path of
+  `connection.connected`: the notification is ignored; the gauge keeps
+  its last value.
+- A missing path of `fields.value`: the reading has no value, and the
+  gauge counts as unavailable, as for any value that is not a number.
+  If a source sends other payloads under the same notification name,
+  tell them apart with `match`.
+- A missing path of another field: the reading counts without that
+  field, as if its path were not set.
 
 At start, each instance also checks its bands: no bands, a `to` that is
 not a number or does not ascend, bands ending before `max`, a `level`

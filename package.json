@@ -1,0 +1,23 @@
+{
+  "name": "mmm-ringgauge",
+  "version": "0.1.0",
+  "description": "A MagicMirror² module that shows one sensor reading as a three-quarter ring with colored bands, a marker and a status word.",
+  "keywords": [
+    "MagicMirror",
+    "gauge",
+    "sensor",
+    "air quality",
+    "co2",
+    "humidity"
+  ],
+  "homepage": "https://github.com/raywo/MMM-RingGauge#readme",
+  "bugs": {
+    "url": "https://github.com/raywo/MMM-RingGauge/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/raywo/MMM-RingGauge.git"
+  },
+  "license": "MIT",
+  "author": "Ray Wojciechowski (https://github.com/raywo)"
+}

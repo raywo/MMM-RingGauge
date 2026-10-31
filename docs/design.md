@@ -106,6 +106,9 @@ Status colors differ in lightness too, not only in hue:
   `<path d="M6 12h2.8M15.2 12H18"/>`
 - Humidity (drop):
   `<path d="M12 3c3.5 4.5 6 7.6 6 11a6 6 0 0 1-12 0c0-3.4 2.5-6.5 6-11z"/>`
+- Temperature (thermometer):
+  `<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/>`,
+  `<path d="M12 9v7"/>`
 - Link broken (unavailable state): two halves of a chain link and six
   break marks, `<path d="M11.5 7.5L14 5a3.54 3.54 0 0 1 5 5l-2.5 2.5"/>`,
   `<path d="M12.5 16.5L10 19a3.54 3.54 0 0 1-5-5l2.5-2.5"/>`,
@@ -137,6 +140,20 @@ Humidity, range 20–80 %:
 | 60 | good | Optimal |
 | 70 | warn | Zu feucht |
 | 80 | bad | Viel zu feucht |
+
+Temperature, range 10–30 °C; on an imperial mirror the limits are
+converted to °F (50–86 °F):
+
+| Up to | Level | Status |
+| --- | --- | --- |
+| 16 | bad | Zu kalt |
+| 19 | warn | Kühl |
+| 24 | good | Angenehm |
+| 27 | warn | Warm |
+| 30 | bad | Zu warm |
+
+The status texts are shown in the mirror's language; the tables name the
+German ones.
 
 ## Special states
 

@@ -1,1 +1,17 @@
-{}
+{
+	"CO2_LABEL": "CO₂",
+	"CO2_GOOD": "Good",
+	"CO2_VENTILATE": "Ventilate",
+	"CO2_VENTILATE_NOW": "Ventilate now",
+	"HUMIDITY_LABEL": "Humidity",
+	"HUMIDITY_TOO_DRY": "Too dry",
+	"HUMIDITY_OPTIMAL": "Optimal",
+	"HUMIDITY_TOO_HUMID": "Too humid",
+	"HUMIDITY_FAR_TOO_HUMID": "Far too humid",
+	"TEMPERATURE_LABEL": "Temperature",
+	"TEMPERATURE_TOO_COLD": "Too cold",
+	"TEMPERATURE_COOL": "Cool",
+	"TEMPERATURE_COMFORTABLE": "Comfortable",
+	"TEMPERATURE_WARM": "Warm",
+	"TEMPERATURE_TOO_WARM": "Too warm"
+}

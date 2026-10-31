@@ -40,9 +40,16 @@ deviation in its last section.
   `updateDom()` for a new value: replacing the DOM breaks the marker
   movement.
 - Move the marker by interpolating its angle, never x and y.
-- Only touch the DOM when value, band or staleness change.
-- Staleness comes from the report time of the reading, not from the time
-  it arrived: a sensor that reports an unchanged value is not stale.
+- Only touch the DOM when value, band or availability change.
+- A value that stays the same is valid: many sensors report only on
+  change. Whether a value counts comes from the source (availability in
+  the reading, a connection notification).
+- Never let a value turn stale by its age unless the instance sets
+  `staleAfter`; it is off by default and meant for sources without any
+  availability signal. Measure the age from the report time if the source
+  sends one, else from the time of receipt.
+- Never mark a lost connection before the configured grace period: a
+  source may drop briefly, e.g. while Home Assistant restarts.
 - No `backdrop-filter`: too slow over large photos on a Raspberry Pi.
 - Do not set `font-family`: the gauge takes the mirror's font so that
   themes apply.
@@ -54,8 +61,9 @@ deviation in its last section.
 
 ## Host pitfalls
 
-- MagicMirror replaces `${VAR}` in `config.js` textually; values from
-  `.env` arrive as strings ("false" is truthy).
+- MagicMirror replaces `${VAR}` in `config.js` textually. Unquoted, a
+  value keeps its type (`useTLS: ${USE_TLS}` is a boolean); quoted, it
+  becomes a string, and `"false"` is truthy.
 - `SECRET_*` variables reach the browser only as placeholders and are
   restored for a `node_helper`. A passive module never needs one.
 

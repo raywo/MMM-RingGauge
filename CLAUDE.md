@@ -59,6 +59,27 @@ deviation in its last section.
 - A new user-facing string goes into every file in `translations/`.
 - No runtime dependencies; MagicMirror provides `Module`, `Log`, `config`.
 
+## Build, lint, test
+
+No bundler and no dependencies: MagicMirror loads the files as they are,
+and users install by `git clone` only.
+
+- Syntax check: `git ls-files '*.js' | xargs -n1 node --check`
+- Lint: `pnpm dlx @biomejs/biome@2.6.3 ci .` – Biome runs standalone and
+  needs no entry in `package.json`. Keep its version the same in the
+  `$schema` of `biome.json`, in the workflow and here.
+- Tests: `node --test "tests/**/*.test.js"`. Do not add Vitest, Jest or
+  ESLint: they need dependencies and a lockfile.
+- Keep the workflow on the action and Node versions the MagicMirror²
+  module list checks (`actions/checkout@v7`, `actions/setup-node@v7`,
+  Node 22).
+- The job `checks` in `.github/workflows/checks.yml` is a required status
+  check of the ruleset "Protect main". Renaming or splitting the job
+  requires updating the ruleset in the same pull request, or every pull
+  request waits for a check that never reports.
+- Give the `pull_request` trigger no branch filter: issue pull requests of
+  a run target `run/*` and are merged there only after the checks pass.
+
 ## Host pitfalls
 
 - MagicMirror replaces `${VAR}` in `config.js` textually. Unquoted, a
@@ -74,8 +95,6 @@ deviation in its last section.
 - **Open:** presets per quantity in the module vs. full config per
   instance (proposed: presets in the module, overridable).
 - **Open:** status texts in the config or as translation keys per level.
-- **Open:** toolchain. Proposed as in WallberryTheme: Biome for linting,
-  `node --test` without dependencies, a GitHub workflow for both.
 - **Open:** tests for the pure logic (band lookup, angle, staleness);
   needs that logic separated from the DOM.
 - **Open:** a `CHANGELOG.md` and a screenshot for the module list.

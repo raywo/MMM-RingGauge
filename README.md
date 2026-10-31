@@ -475,6 +475,7 @@ them in `config/custom.css`:
 | `--ring-gauge-scrim` | `rgb(8, 10, 14)` – color of the halo |
 | `--ring-gauge-good`, `--ring-gauge-warn`, `--ring-gauge-bad` | `#4ade80`, `#fbbf24`, `#f87171` |
 | `--ring-gauge-text`, `--ring-gauge-label`, `--ring-gauge-unit` | text colors |
+| `--ring-gauge-unavailable` | `var(--ring-gauge-warn)` – color of the "link broken" symbol |
 | `--ring-gauge-gap` | `48px` – space between instances in one region |
 
 With WallberryTheme, the halo can take the hue of the photo. Without a

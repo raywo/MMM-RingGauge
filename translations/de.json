@@ -1,3 +1,17 @@
 {
-  "STALE": "veraltet"
+	"CO2_LABEL": "CO₂",
+	"CO2_GOOD": "Gut",
+	"CO2_VENTILATE": "Lüften",
+	"CO2_VENTILATE_NOW": "Jetzt lüften",
+	"HUMIDITY_LABEL": "Luftfeuchte",
+	"HUMIDITY_TOO_DRY": "Zu trocken",
+	"HUMIDITY_OPTIMAL": "Optimal",
+	"HUMIDITY_TOO_HUMID": "Zu feucht",
+	"HUMIDITY_FAR_TOO_HUMID": "Viel zu feucht",
+	"TEMPERATURE_LABEL": "Temperatur",
+	"TEMPERATURE_TOO_COLD": "Zu kalt",
+	"TEMPERATURE_COOL": "Kühl",
+	"TEMPERATURE_COMFORTABLE": "Angenehm",
+	"TEMPERATURE_WARM": "Warm",
+	"TEMPERATURE_TOO_WARM": "Zu warm"
 }

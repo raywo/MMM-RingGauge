@@ -23,7 +23,7 @@ deviations are listed at the end.
     ├── head: icon 16 px + name
     ├── value
     ├── unit
-    └── status word
+    └── status word, or the "link broken" icon while unavailable
 ```
 
 ## Scale geometry
@@ -106,6 +106,13 @@ Status colors differ in lightness too, not only in hue:
   `<path d="M6 12h2.8M15.2 12H18"/>`
 - Humidity (drop):
   `<path d="M12 3c3.5 4.5 6 7.6 6 11a6 6 0 0 1-12 0c0-3.4 2.5-6.5 6-11z"/>`
+- Temperature (thermometer):
+  `<path d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0z"/>`,
+  `<path d="M12 9v7"/>`
+- Link broken (unavailable state): two halves of a chain link and six
+  break marks, `<path d="M11.5 7.5L14 5a3.54 3.54 0 0 1 5 5l-2.5 2.5"/>`,
+  `<path d="M12.5 16.5L10 19a3.54 3.54 0 0 1-5-5l2.5-2.5"/>`,
+  `<path d="M8.5 8.5l-2-2M15.5 15.5l2 2M11 5V3M5 11H3M13 19v2M19 13h2"/>`
 
 Further icons follow the same style.
 
@@ -134,18 +141,36 @@ Humidity, range 20–80 %:
 | 70 | warn | Zu feucht |
 | 80 | bad | Viel zu feucht |
 
+Temperature, range 10–30 °C; on an imperial mirror the limits are
+converted to °F (50–86 °F):
+
+| Up to | Level | Status |
+| --- | --- | --- |
+| 16 | bad | Zu kalt |
+| 19 | warn | Kühl |
+| 24 | good | Angenehm |
+| 27 | warn | Warm |
+| 30 | bad | Zu warm |
+
+The status texts are shown in the mirror's language; the tables name the
+German ones.
+
 ## Special states
 
 - **No value yet:** value "—", all segments at opacity 0.3, no marker, no
   status word.
-- **Stale value** (older than a configurable time, default 10 min): value
-  and marker at opacity 0.5, status word "veraltet" (stale) in
-  `rgba(255,255,255,.7)`.
+- **Unavailable** (no current value, for whatever cause: lost
+  connection, a reading marked unavailable or not numeric, or older than
+  an optional `staleAfter`): the last valid value, the marker and the
+  active band at opacity 0.5. In place of the status word, the outline
+  "link broken" icon, 16 × 16 px, in the unit color
+  `rgba(255,255,255,.7)`, 4 px space above; no status word. Without any
+  valid value so far, "No value yet" applies instead.
 
 ## Implementation notes
 
 - Build the DOM in `getDom()`, SVG via `document.createElementNS`.
-- Only re-render when value or level change. For the marker movement,
+- Only re-render when value, level or availability change. For the marker movement,
   update the existing marker instead of replacing the DOM.
 - Styles in the module's own CSS file, sizes and colors as CSS custom
   properties, so that all instances can be adjusted together.
@@ -162,5 +187,17 @@ Humidity, range 20–80 %:
   synthesizes it.
 - **Halo color:** the scrim color is the custom property
   `--ring-gauge-scrim`, so that a theme can tint it.
-- **Active band while stale:** not specified; the band of the last value
-  stays active.
+- **Invalid bands:** not specified. Without bands the gauge shows value
+  and marker but no segment and no status word. Beyond drawn bands that
+  end before `max`, a value takes no band and shows no status word. A
+  band narrower than the gap gets the dash length `max(f_i · L − 5, 0)`
+  instead of a negative one.
+- **Band of a rounded value:** the active band and the status word
+  follow the value as shown, rounded to `decimals`, so that one number
+  never shows two status words: 59.6 % shows as "60" and takes the band
+  from 60 on. The marker keeps the exact value.
+- **No value yet without a quantity:** when the quantity comes only from
+  the payload and the config sets no `quantity`, there is no preset
+  before the first valid reading: the gauge shows "—" without segments,
+  icon, label or unit. Setting `quantity` as a fallback draws the
+  segments at opacity 0.3 as specified.

@@ -144,7 +144,18 @@
   color: var(--ring-gauge-bad);
 }
 
-.ring-gauge-stale .ring-gauge-value,
-.ring-gauge-stale .ring-gauge-marker {
+/* No current value: the last valid one stays, dimmed, and the "link
+   broken" symbol takes the place of the status word. */
+.ring-gauge-unavailable .ring-gauge-value,
+.ring-gauge-unavailable .ring-gauge-marker {
   opacity: 0.5;
+}
+
+.ring-gauge-unavailable .ring-gauge-segment.ring-gauge-active {
+  stroke-opacity: 0.5;
+}
+
+.ring-gauge-unavailable-icon {
+  margin-top: 4px;
+  color: var(--ring-gauge-unit);
 }

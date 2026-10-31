@@ -19,23 +19,18 @@ deviation in its last section.
   even as a default: that binds the gauge to one source.
 - Never ask a source to change its payload for this module; map it in the
   config instead.
-- The interim `node_helper.js` that polls Home Assistant is to be removed.
-  Do not extend it.
 
 ## Rules
 
-- A `node_helper` takes host, port, token and the list of entities from
-  the server-side config (`global.config.modules`, or
-  `getServerModuleConfig()` for single-instance modules), never from a
-  socket message. MagicMirror restores `SECRET_*` placeholders in every
-  socket message, so a host from the browser lets anyone who can open the
-  mirror send the token to their own server.
-- Treat every socket message from the browser as untrusted: accept only
-  names that the server-side config lists.
+- The module has no `node_helper`, fetches nothing and needs no secrets.
+- MagicMirror² 2.36.0 is the minimum: `transform` needs functions in the
+  config. Keep `requiresVersion` in step with the README's
+  "Requirements".
 - Readings carry facts only: value, unit, quantity, report time,
   availability. Scale, bands, label, icon and status texts belong to this
-  module's config. Never expect a level or assessment from a source: it
-  would have to know thresholds and couple to this module.
+  module: its presets per quantity and the instance's config. Never expect
+  a level or assessment from a source: it would have to know thresholds
+  and couple to this module.
 - Build the DOM once; update existing elements. Do not call
   `updateDom()` for a new value: replacing the DOM breaks the marker
   movement.
@@ -59,23 +54,28 @@ deviation in its last section.
 - A new user-facing string goes into every file in `translations/`.
 - No runtime dependencies; MagicMirror provides `Module`, `Log`, `config`.
 
-## Host pitfalls
+## Build, lint, test
 
-- MagicMirror replaces `${VAR}` in `config.js` textually. Unquoted, a
-  value keeps its type (`useTLS: ${USE_TLS}` is a boolean); quoted, it
-  becomes a string, and `"false"` is truthy.
-- `SECRET_*` variables reach the browser only as placeholders and are
-  restored for a `node_helper`. A passive module never needs one.
+No bundler and no dependencies: MagicMirror loads the files as they are,
+and users install by `git clone` only.
+
+- Syntax check: `git ls-files '*.js' | xargs -n1 node --check`
+- Lint: `pnpm dlx @biomejs/biome@2.6.3 ci .` – Biome runs standalone and
+  needs no entry in `package.json`. Keep its version the same in the
+  `$schema` of `biome.json`, in the workflow, in the README section
+  "Development" and here.
+- Tests: `node --test "tests/**/*.test.js"`. Do not add Vitest, Jest or
+  ESLint: they need dependencies and a lockfile.
+- Keep the workflow on the action and Node versions the MagicMirror²
+  module list checks (`actions/checkout@v7`, `actions/setup-node@v7`,
+  Node 22).
+- The job `checks` in `.github/workflows/checks.yml` is a required status
+  check of the ruleset "Protect main". Renaming or splitting the job
+  requires updating the ruleset in the same pull request, or every pull
+  request waits for a check that never reports.
+- Give the `pull_request` trigger no branch filter: issue pull requests of
+  a run target `run/*` and are merged there only after the checks pass.
 
 ## Open
 
-- **Open:** options that map a source onto the gauge's fields (paths,
-  transformation function).
-- **Open:** presets per quantity in the module vs. full config per
-  instance (proposed: presets in the module, overridable).
-- **Open:** status texts in the config or as translation keys per level.
-- **Open:** toolchain. Proposed as in WallberryTheme: Biome for linting,
-  `node --test` without dependencies, a GitHub workflow for both.
-- **Open:** tests for the pure logic (band lookup, angle, staleness);
-  needs that logic separated from the DOM.
 - **Open:** a `CHANGELOG.md` and a screenshot for the module list.

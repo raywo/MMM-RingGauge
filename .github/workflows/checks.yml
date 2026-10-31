@@ -1,0 +1,31 @@
+name: Checks
+
+on:
+  # No branch filter: pull requests of a run target run/* and must be
+  # checked there before they are merged.
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  # The ruleset "Protect main" requires this job by its name, "checks".
+  # Renaming or splitting it means updating the ruleset in the same pull
+  # request.
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - uses: biomejs/setup-biome@v2
+        with:
+          # Keep in step with the $schema version in biome.json
+          version: 2.6.3
+      - name: Check the syntax of every JavaScript file
+        run: git ls-files '*.js' | xargs -n1 node --check
+      - name: Lint with Biome
+        run: biome ci .
+      - name: Run the tests
+        run: node --test "tests/**/*.test.js"

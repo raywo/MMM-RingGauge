@@ -15,19 +15,39 @@
   --ring-gauge-unit: rgba(255, 255, 255, 0.7);
   --ring-gauge-unavailable: var(--ring-gauge-warn);
   --ring-gauge-gap: 2.4rem;
+  --ring-gauge-max-width: 100%;
 }
 
 /* The rings of one instance in a row. MagicMirror² stacks the modules of
    a region; this row lays out only the rings of its own instance. The
-   width follows the rings, so the region's alignment places the row. The
-   options in `layout` set gap, maximum width and wrapping inline. */
+   width follows the rings, so the region's alignment places the row.
+   `layout.gap` and `layout.maxWidth` set --ring-gauge-gap and
+   --ring-gauge-max-width inline, `layout.wrap` the wrapping. */
 .ring-gauge-row {
+  /* With a unit: calc() cannot subtract a bare 0 from a length. */
+  --ring-gauge-row-padding: 0em;
   position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: var(--ring-gauge-gap);
+  /* The limit below counts without padding. */
+  box-sizing: content-box;
+  padding: var(--ring-gauge-row-padding);
   width: fit-content;
-  max-width: 100%;
+  /* Wrapped, fit-content would keep the full limit and leave space
+     beside the rings. Rings never shrink, so the widest line holds as
+     many rings as fit into the limit: round down to whole rings. At
+     least one ring wide, which then overflows a narrower limit. */
+  max-width: max(
+    var(--ring-gauge-size),
+    calc(
+      round(
+        down,
+        min(var(--ring-gauge-max-width), 100%) - 2 * var(--ring-gauge-row-padding) + var(--ring-gauge-gap),
+        var(--ring-gauge-size) + var(--ring-gauge-gap)
+      ) - var(--ring-gauge-gap)
+    )
+  );
   /* 1em as inside a ring, for the panel's sizes. */
   font-size: calc(var(--ring-gauge-size) / 10.5);
 }
@@ -89,7 +109,7 @@
    `classes: "ring-gauge-panel"`: it takes the place of the rings' own
    discs. */
 .ring-gauge-panel .ring-gauge-row {
-  padding: 0.8em;
+  --ring-gauge-row-padding: 0.8em;
   border-radius: 1.6em;
   background: color-mix(in srgb, var(--ring-gauge-scrim) 60%, transparent);
   box-shadow:

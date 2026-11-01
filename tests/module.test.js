@@ -38,7 +38,12 @@ class FakeElement {
 		this.attributes = {};
 		this.children = [];
 		this.classes = new Set();
-		this.style = {};
+		// setProperty is not enumerable, so a spread shows only the styles set.
+		this.style = Object.defineProperty({}, "setProperty", {
+			value(property, value) {
+				this[property] = value;
+			}
+		});
 		this.textContent = "";
 		this.innerHTML = "";
 		this.classList = {
@@ -1052,9 +1057,9 @@ describe(MODULE_NAME, () => {
 			);
 		});
 
-		it("sets gap, maximum width and wrapping from `layout`", () => {
+		it("sets gap and maximum width as custom properties, and wrapping, from `layout`", () => {
 			const {instance} = startInstance({...GROUP, layout: {wrap: false, gap: "1.5rem", maxWidth: "40rem"}});
-			assert.deepEqual({...rows(instance).style}, {flexWrap: "nowrap", gap: "1.5rem", maxWidth: "40rem"});
+			assert.deepEqual({...rows(instance).style}, {flexWrap: "nowrap", "--ring-gauge-gap": "1.5rem", "--ring-gauge-max-width": "40rem"});
 		});
 
 		it("leaves the row to the CSS with the default layout", () => {
@@ -1092,7 +1097,7 @@ describe(MODULE_NAME, () => {
 				[0, 1, 2].map((index) => shown(instance, index).value),
 				["812", "48", "21.5"]
 			);
-			assert.equal(rows(instance).style.gap, "2rem");
+			assert.equal(rows(instance).style["--ring-gauge-gap"], "2rem");
 			assert.deepEqual(logged, []);
 		});
 

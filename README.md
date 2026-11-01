@@ -270,12 +270,15 @@ Group, see [Several readings side by side](#several-readings-side-by-side):
 `layout.wrap` (default `true`) lets the rings that do not fit wrap into
 a further row; `false` keeps them in one row, and rings that do not fit
 stand out past the row's end. A ring never shrinks. `layout.gap` and
-`layout.maxWidth` take a CSS length such as `"2rem"`; without them, the
-gap is `--ring-gauge-gap` and the row is as wide as its rings, at most
-as wide as the region. `layout.maxWidth` is a limit, not a width: a row
-whose rings need less stays narrower. `layout.align` (`start`, `center`
-or `end`, default `start`) places the rings within each row, e.g. a
-last row with fewer rings.
+`layout.maxWidth` take a CSS length such as `"2rem"` and set
+`--ring-gauge-gap` and `--ring-gauge-max-width` (see
+[Styling](#styling)); without them, the row is at most as wide as the
+region. `layout.maxWidth` is a limit, not a width: the row is as wide as
+its widest line of rings, so a row whose rings need less stays
+narrower, and a wrapped row leaves no empty space beside its rings. It
+is always at least one ring wide. `layout.align` (`start`, `center` or
+`end`, default `start`) places the rings within each row, e.g. a last
+row with fewer rings.
 
 ### Several readings side by side
 
@@ -600,8 +603,9 @@ them in `config/custom.css`:
 | `--ring-gauge-text`, `--ring-gauge-label`, `--ring-gauge-unit` | text colors |
 | `--ring-gauge-unavailable` | `var(--ring-gauge-warn)` – color of the "link broken" symbol |
 | `--ring-gauge-gap` | `2.4rem` – space between the rings of a group |
+| `--ring-gauge-max-width` | `100%` – limit of a group's width, at most the region's |
 
-Both sizes are in `rem`, so the gauge grows with MagicMirror's
+Size and gap are in `rem`, so the gauge grows with MagicMirror's
 `--font-size` like the other modules do.
 
 ### Frosted glass

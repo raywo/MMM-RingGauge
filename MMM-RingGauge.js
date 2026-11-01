@@ -449,8 +449,8 @@ Module.register("MMM-RingGauge", {
       if (layout.wrap === false) {
         row.style.flexWrap = "nowrap";
       }
-      this.applyLength(row, "gap", "gap", layout.gap);
-      this.applyLength(row, "maxWidth", "max-width", layout.maxWidth);
+      this.applyLength(row, "gap", "gap", "--ring-gauge-gap", layout.gap);
+      this.applyLength(row, "maxWidth", "max-width", "--ring-gauge-max-width", layout.maxWidth);
       this.applyAlign(row, layout.align);
     }
     for (const ring of this.rings) {
@@ -471,8 +471,10 @@ Module.register("MMM-RingGauge", {
     row.style.justifyContent = ALIGNMENTS[align];
   },
 
-  // Sets a length from `layout` if the browser accepts it, e.g. "2rem".
-  applyLength (row, option, property, value) {
+  // Sets a length from `layout` if the browser accepts it for the
+  // property, e.g. "2rem". It goes into a custom property: the CSS
+  // computes the row's width from gap and limit.
+  applyLength (row, option, property, customProperty, value) {
     if (value === null || value === undefined) {
       return;
     }
@@ -480,7 +482,7 @@ Module.register("MMM-RingGauge", {
       this.logOnce("layout:" + option, this.instanceName(), "`layout." + option + "` " + JSON.stringify(value) + " is not a CSS length, e.g. \"2rem\"");
       return;
     }
-    row.style[option] = value;
+    row.style.setProperty(customProperty, value);
   },
 
   notificationReceived (notification, payload) {

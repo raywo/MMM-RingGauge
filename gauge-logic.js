@@ -2,7 +2,6 @@
   Pure logic of MMM-RingGauge: band lookup, segment geometry and marker
   angle. No DOM and no MagicMirror: the browser loads this file
   through getScripts() as the global RingGaugeLogic, tests require() it.
-  The geometry follows docs/design.md, "Scale geometry".
  */
 
 (function (root, factory) {

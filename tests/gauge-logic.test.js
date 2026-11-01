@@ -6,7 +6,7 @@ const vm = require("node:vm");
 
 const logic = require("../gauge-logic.js");
 
-// Bands and ranges from docs/design.md, "Bands".
+// Bands and ranges of the presets.
 const CO2 = {
 	min: 400,
 	max: 2500,
@@ -27,7 +27,7 @@ const HUMIDITY = {
 	]
 };
 
-// docs/design.md, "Scale geometry": L = 2π · 78 · 0.75.
+// Arc length of the three-quarter ring: L = 2π · 78 · 0.75.
 const L = 2 * Math.PI * 78 * 0.75;
 
 function assertClose(actual, expected, message) {

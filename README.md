@@ -509,8 +509,6 @@ photo, `--wb-tint-dark` is invalid and the fallback applies:
 }
 ```
 
-The full visual specification is in [docs/design.md](docs/design.md).
-
 ## Development
 
 The module has no build step and no dependencies. Run the checks the

@@ -6,9 +6,6 @@ A MagicMirror² module (`MMM-RingGauge`) that shows one reading per
 instance as a three-quarter ring with colored bands, a marker and a status
 word. Users clone it into `MagicMirror/modules/`.
 
-The visual specification is `docs/design.md`. Follow it; record every
-deviation in its last section.
-
 ## Target architecture
 
 - The module is independent of any data source: it reacts to

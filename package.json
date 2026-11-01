@@ -1,7 +1,7 @@
 {
   "name": "mmm-ringgauge",
-  "version": "0.1.0",
-  "description": "A MagicMirror² module that shows one sensor reading as a three-quarter ring with colored bands, a marker and a status word.",
+  "version": "1.0.0",
+  "description": "A MagicMirror² module that shows sensor readings as three-quarter rings with colored bands, a marker and a status word: one ring per instance, or a group in one row.",
   "keywords": [
     "MagicMirror",
     "gauge",

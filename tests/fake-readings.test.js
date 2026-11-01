@@ -82,6 +82,17 @@ describe("MMM-FakeReadings readingsAt", () => {
 		assert.equal(instance.readingsAt(index)[0].available, false);
 	});
 
+	it("sends a fixed value for every sensor named in fixed, at every tick", () => {
+		const {instance} = loadMock({fixed: {co2: 900, humidity: 63}});
+		for (const index of [0, 5, instance.scenarios[0].values.indexOf(null)]) {
+			const [co2, humidity, temperature] = instance.readingsAt(index);
+			assert.equal(co2.value, 900);
+			assert.equal(co2.available, true);
+			assert.equal(humidity.value, 63);
+			assert.equal(temperature.value, instance.scenarios[2].values[index]);
+		}
+	});
+
 	it("repeats the values from the start", () => {
 		const {instance} = loadMock();
 		const length = instance.scenarios[0].values.length;

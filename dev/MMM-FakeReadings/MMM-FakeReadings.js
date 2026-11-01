@@ -41,7 +41,10 @@ Module.register("MMM-FakeReadings", {
     // Every `dropEvery` ticks the connection drops for the last `dropFor`
     // of them; 0 never drops it.
     dropEvery: 24,
-    dropFor: 3
+    dropFor: 3,
+    // A value per sensor, e.g. { co2: 900 }, sent at every tick instead
+    // of its list: for screenshots that can be taken again.
+    fixed: {}
   },
 
   scenarios: FAKE_READINGS_SCENARIOS,
@@ -69,8 +72,11 @@ Module.register("MMM-FakeReadings", {
 
   // The payloads of the readings sent at reading tick `index`.
   readingsAt (index) {
+    const fixed = this.config.fixed ?? {};
     return this.scenarios.map((scenario) => {
-      const value = scenario.values[index % scenario.values.length];
+      const value = Object.hasOwn(fixed, scenario.sensor)
+        ? fixed[scenario.sensor]
+        : scenario.values[index % scenario.values.length];
       return {
         sensor: scenario.sensor,
         quantity: scenario.quantity,

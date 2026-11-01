@@ -6,7 +6,7 @@ const vm = require("node:vm");
 
 const logic = require("../gauge-logic.js");
 
-// Bands and ranges from docs/design.md, "Bands".
+// Bands and ranges of the presets.
 const CO2 = {
 	min: 400,
 	max: 2500,
@@ -27,8 +27,8 @@ const HUMIDITY = {
 	]
 };
 
-// docs/design.md, "Scale geometry": L = 2π · 78 · 0.75.
-const L = 2 * Math.PI * 78 * 0.75;
+// Arc length of the three-quarter ring: L = 2π · 88 · 0.75.
+const L = 2 * Math.PI * 88 * 0.75;
 
 function assertClose(actual, expected, message) {
 	assert.ok(Math.abs(actual - expected) < 1e-9, `${message}: expected ${expected}, got ${actual}`);
@@ -122,7 +122,7 @@ describe("segmentGeometry", () => {
 		const actual = logic.segmentGeometry(CO2.bands, CO2.min, CO2.max);
 		assertSegments(actual, expected([600 / 2100, 1000 / 2100, 500 / 2100]));
 		// The first segment, rounded to four places.
-		assert.ok(Math.abs(actual[0].dashLength - 100.0189) < 1e-4);
+		assert.ok(Math.abs(actual[0].dashLength - 113.4829) < 1e-4);
 	});
 
 	it("draws the humidity bands", () => {

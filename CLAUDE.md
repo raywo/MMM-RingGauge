@@ -6,9 +6,6 @@ A MagicMirror² module (`MMM-RingGauge`) that shows one reading per
 instance as a three-quarter ring with colored bands, a marker and a status
 word. Users clone it into `MagicMirror/modules/`.
 
-The visual specification is `docs/design.md`. Follow it; record every
-deviation in its last section.
-
 ## Target architecture
 
 - The module is independent of any data source: it reacts to
@@ -45,10 +42,15 @@ deviation in its last section.
   sends one, else from the time of receipt.
 - Never mark a lost connection before the configured grace period: a
   source may drop briefly, e.g. while Home Assistant restarts.
-- No `backdrop-filter`: too slow over large photos on a Raspberry Pi.
+- Keep `backdrop-filter` off by default and on only with the class
+  `ring-gauge-blur`: MagicMirror² disables the GPU unless
+  `ELECTRON_ENABLE_GPU=1` is set, and on the CPU the blur may be too
+  slow.
 - Do not set `font-family`: the gauge takes the mirror's font so that
   themes apply.
 - Sizes and colors stay CSS custom properties on `.MMM-RingGauge`.
+- Give sizes in `rem` or `em`, never `px`: the gauge grows with the
+  mirror's `--font-size`, its content with `--ring-gauge-size`.
 - Do not reference a theme's variables in the module; themes are bound in
   the user's `custom.css` (see README, "Styling").
 - A new user-facing string goes into every file in `translations/`.

@@ -1,6 +1,11 @@
+/* Sizes are relative, as in MagicMirror's own CSS: the gauge grows with
+   the mirror's --font-size (rem), and everything inside it grows with
+   --ring-gauge-size (em). Do not give sizes in px. */
 .MMM-RingGauge {
-  --ring-gauge-size: 210px;
+  --ring-gauge-size: 10.5rem;
   --ring-gauge-scrim: rgb(8, 10, 14);
+  --ring-gauge-rim: rgba(255, 255, 255, 0.55);
+  --ring-gauge-blur: 0.6em;
   --ring-gauge-good: #4ade80;
   --ring-gauge-warn: #fbbf24;
   --ring-gauge-bad: #f87171;
@@ -9,7 +14,7 @@
   --ring-gauge-label: rgba(255, 255, 255, 0.8);
   --ring-gauge-unit: rgba(255, 255, 255, 0.7);
   --ring-gauge-unavailable: var(--ring-gauge-warn);
-  --ring-gauge-gap: 48px;
+  --ring-gauge-gap: 2.4rem;
 }
 
 /* Several instances in one region sit side by side. */
@@ -22,22 +27,54 @@
   margin-left: var(--ring-gauge-gap);
 }
 
-/* A soft dark halo without an edge. No backdrop-filter: blurring the
-   large background photo is too slow on a Raspberry Pi. */
+/* A disc of tinted glass: dark enough in the middle that the text reads
+   on a bright photo, lit on its rim from the top left. */
 .ring-gauge {
   position: relative;
   width: var(--ring-gauge-size);
   height: var(--ring-gauge-size);
   border-radius: 50%;
+  /* 1em is the gauge's width / 10.5, 20 px at the default size; all
+     sizes inside are em of it. */
+  font-size: calc(var(--ring-gauge-size) / 10.5);
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--ring-gauge-scrim) 72%, transparent) 0 62%,
-    color-mix(in srgb, var(--ring-gauge-scrim) 45%, transparent) 74%,
-    transparent 100%
+    color-mix(in srgb, var(--ring-gauge-scrim) 68%, transparent) 0 62%,
+    color-mix(in srgb, var(--ring-gauge-scrim) 50%, transparent) 100%
   );
+  box-shadow:
+    /* Light on the rim, bright top left, faint bottom right. */
+    inset 0.08em 0.08em 0.04em -0.04em var(--ring-gauge-rim),
+    inset -0.06em -0.06em 0.04em -0.04em color-mix(in srgb, var(--ring-gauge-rim) 40%, transparent),
+    /* The glass thickens towards its edge. */
+    inset 0 0 1.2em color-mix(in srgb, var(--ring-gauge-rim) 12%, transparent),
+    /* Lifts the disc off the photo. */
+    0 0.3em 1em rgba(0, 0, 0, 0.35);
   /* No font-family: the gauge takes the mirror's font, which a theme
      may replace. */
   text-shadow: none;
+}
+
+/* Sheen on the upper left of the glass, beneath ring and text. */
+.ring-gauge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--ring-gauge-rim) 22%, transparent) 0,
+    transparent 45%
+  );
+  pointer-events: none;
+}
+
+/* Frosted glass, opt in with `classes: "ring-gauge-blur"` in the
+   module's config. The blur is redone on every frame in which the photo
+   or the gauge changes, on the CPU unless the GPU is on: MagicMirror²
+   disables it unless ELECTRON_ENABLE_GPU=1 is set. */
+.ring-gauge-blur .ring-gauge {
+  backdrop-filter: blur(var(--ring-gauge-blur)) saturate(1.4);
 }
 
 .ring-gauge-scale {
@@ -49,7 +86,7 @@
 
 .ring-gauge-segment {
   fill: none;
-  stroke-width: 9;
+  stroke-width: 10;
   stroke-linecap: butt;
   stroke-opacity: 0.3;
 }
@@ -88,24 +125,24 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 0.2em;
 }
 
 .ring-gauge-head {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 0.3em;
   color: var(--ring-gauge-label);
-  font-size: 12px;
+  font-size: 0.65em;
   font-weight: 400;
-  line-height: 16px;
+  line-height: 1;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .ring-gauge-icon {
-  width: 16px;
-  height: 16px;
+  width: 1.4em;
+  height: 1.4em;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -115,7 +152,7 @@
 
 .ring-gauge-value {
   color: var(--ring-gauge-text);
-  font-size: 46px;
+  font-size: 2.6em;
   font-weight: 300;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -123,16 +160,16 @@
 
 .ring-gauge-unit {
   color: var(--ring-gauge-unit);
-  font-size: 13px;
+  font-size: 0.75em;
   font-weight: 400;
   line-height: 1;
 }
 
 .ring-gauge-status {
-  margin-top: 4px;
-  min-height: 14px;
+  margin-top: 0.25em;
+  min-height: 1em;
   color: var(--ring-gauge-unit);
-  font-size: 14px;
+  font-size: 0.8em;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
@@ -167,11 +204,11 @@
 
 /* The symbol is the only sign that the value is not current, so it is
    larger than the status word and takes a signal color. The negative
-   margins keep the 18 px of the status line (4 px above, 14 px high), so
-   the value does not move when the gauge dims. */
+   margins keep the height of the status line (0.2em above, 0.8em high,
+   in the center's em), so the value does not move when the gauge dims. */
 .ring-gauge-unavailable-icon {
-  width: 24px;
-  height: 24px;
-  margin: -1px 0 -5px;
+  width: 1.35em;
+  height: 1.35em;
+  margin: -0.05em 0 -0.3em;
   color: var(--ring-gauge-unavailable);
 }

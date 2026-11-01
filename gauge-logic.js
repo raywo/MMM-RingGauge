@@ -2,7 +2,6 @@
   Pure logic of MMM-RingGauge: band lookup, segment geometry and marker
   angle. No DOM and no MagicMirror: the browser loads this file
   through getScripts() as the global RingGaugeLogic, tests require() it.
-  The geometry follows docs/design.md, "Scale geometry".
  */
 
 (function (root, factory) {
@@ -15,7 +14,7 @@
 })(this, function () {
   // Geometry in SVG user units; the SVG scales with --ring-gauge-size.
   const CENTER = 105;
-  const RADIUS = 78;
+  const RADIUS = 88;
   const START_ANGLE = 135;
   const SWEEP = 270;
   const ARC_LENGTH = 2 * Math.PI * RADIUS * (SWEEP / 360);

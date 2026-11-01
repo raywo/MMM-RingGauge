@@ -1037,6 +1037,21 @@ describe(MODULE_NAME, () => {
 			]);
 		});
 
+		it("shows one ring from the options outside `rings` if no entry is an object", () => {
+			const {instance, logged} = startInstance({...GROUP, rings: [null, "co2"]});
+			assert.equal(instance.rings.length, 1);
+			receive(instance, 5);
+			assert.equal(shown(instance).value, "5");
+			assert.deepEqual(
+				logged.map((entry) => entry.message),
+				[
+					`${MODULE_NAME} (TEST_READING): ring 0 in \`rings\` is not an object`,
+					`${MODULE_NAME} (TEST_READING): ring 1 in \`rings\` is not an object`,
+					`${MODULE_NAME} (TEST_READING): \`rings\` holds no ring; showing one ring from the options outside \`rings\``
+				]
+			);
+		});
+
 		it("sets gap, maximum width and wrapping from `layout`", () => {
 			const {instance} = startInstance({...GROUP, layout: {wrap: false, gap: "1.5rem", maxWidth: "40rem"}});
 			assert.deepEqual({...rows(instance).style}, {flexWrap: "nowrap", gap: "1.5rem", maxWidth: "40rem"});

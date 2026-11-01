@@ -384,7 +384,8 @@ metric). A temperature in a unit other than °C and °F is logged as a warning.
 
 A group logs `rings` that is not a list with at least one entry, and
 then shows one ring from the options outside `rings`; an entry that is
-not an object, which it leaves out; and a `layout` that is not an
+not an object, which it leaves out, falling back to one ring the same
+way if no entry is left; and a `layout` that is not an
 object, or a `gap` or `maxWidth` the browser does not take as a CSS
 length, which it ignores.
 

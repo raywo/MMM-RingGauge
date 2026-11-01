@@ -431,6 +431,10 @@ Module.register("MMM-RingGauge", {
       }
       list.push({ options: { ...defaults, ...ring }, index });
     });
+    if (list.length === 0) {
+      this.logOnce("rings", this.instanceName(), "`rings` holds no ring; showing one ring from the options outside `rings`");
+      return [{ options: defaults, index: null }];
+    }
     return list;
   },
 

@@ -53,7 +53,7 @@ ring per instance, or with `rings` a group in one row. Users clone it into
 - Give sizes in `rem` or `em`, never `px`: the gauge grows with the
   mirror's `--font-size`, its content with `--ring-gauge-size`.
 - Do not reference a theme's variables in the module; themes are bound in
-  the user's `custom.css` (see README, "Styling").
+  the user's `custom.css` (see `docs/styling.md`).
 - A new user-facing string goes into every file in `translations/`.
 - No runtime dependencies; MagicMirror provides `Module`, `Log`, `config`.
 
@@ -65,8 +65,8 @@ and users install by `git clone` only.
 - Syntax check: `git ls-files '*.js' | xargs -n1 node --check`
 - Lint: `pnpm dlx @biomejs/biome@2.6.3 ci .` – Biome runs standalone and
   needs no entry in `package.json`. Keep its version the same in the
-  `$schema` of `biome.json`, in the workflow, in the README section
-  "Development" and here.
+  `$schema` of `biome.json`, in the workflow, in the section
+  "Development" of `CONTRIBUTING.md` and here.
 - Tests: `node --test "tests/**/*.test.js"`. Do not add Vitest, Jest or
   ESLint: they need dependencies and a lockfile.
 - Keep the workflow on the action and Node versions the MagicMirror²
@@ -86,9 +86,14 @@ reports every deviation as a hint.
 
 - Keep `LICENSE`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, `biome.json` and
   `.github/dependabot.yaml`: the list asks for each.
-- Never write `modules: [` in the README; show module entries on their
-  own.
-- End every module entry in the README with `},`.
+- Never write `modules: [` in a Markdown file's example; show module
+  entries on their own.
+- End every module entry in a Markdown file with `},`.
+- Keep the README to what a user needs to install, configure and fix
+  the gauge. Put the option reference in `docs/configuration.md`,
+  `transform` in `docs/mapping-function.md`, custom properties and
+  classes in `docs/styling.md`, and work on the module in
+  `CONTRIBUTING.md`.
 - Keep the README sections `## Installation` with
   `git clone https://github.com/raywo/MMM-RingGauge.git` and `## Update`.
 - Write `node --run`, never npm's run command, and `MagicMirror²` with
@@ -97,6 +102,6 @@ reports every deviation as a hint.
   changelog, this one too: never quote the flagged spellings here.
 - Keep "screenshot" in the name of `images/screenshot.png` only: the
   list shows the first image whose name contains it. Take it again as
-  the README section "Screenshots" describes.
+  the section "Screenshots" of `CONTRIBUTING.md` describes.
 - Add an entry to `CHANGELOG.md` for every change users notice; raise
   `version` in `package.json` with the release.

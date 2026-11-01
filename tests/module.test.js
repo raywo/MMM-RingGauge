@@ -12,7 +12,7 @@ function read(file) {
 }
 
 /**
- * Evaluates a README example that shows one module entry as it stands in
+ * Evaluates a Markdown example that shows one module entry as it stands in
  * the `modules` array of config.js: an object from a line "{" on, ending
  * with "},". Code above that line, e.g. a helper, runs first.
  */
@@ -400,11 +400,17 @@ describe(MODULE_NAME, () => {
 		assert.match(read("CLAUDE.md"), /MagicMirror² 2\.36\.0/);
 	});
 
-	it("shows module entries in the README that paste into the modules array", () => {
-		const examples = [...read("README.md").matchAll(/```js\n([\s\S]*?)```/g)]
-			.map((match) => match[1])
-			.filter((block) => /^\s*\{?\s*module: "/m.test(block));
-		assert.ok(examples.length >= 10, "the README has its module entries");
+	it("shows module entries in every Markdown file that paste into the modules array", () => {
+		const files = [
+			...fs.readdirSync(REPO_ROOT).filter((file) => file.endsWith(".md")),
+			...fs.readdirSync(path.join(REPO_ROOT, "docs")).map((file) => path.join("docs", file))
+		];
+		const examples = files.flatMap((file) =>
+			[...read(file).matchAll(/```js\n([\s\S]*?)```/g)]
+				.map((match) => match[1])
+				.filter((block) => /^\s*\{?\s*module: "/m.test(block))
+		);
+		assert.ok(examples.length >= 10, "the Markdown files have their module entries");
 		for (const block of examples) {
 			const lines = block.trimEnd().split("\n");
 			const start = lines.findIndex((line) => line.startsWith("{"));
@@ -905,8 +911,8 @@ describe(MODULE_NAME, () => {
 		});
 	});
 
-	describe("README, Advanced: mapping function", () => {
-		const section = read("README.md").split("## Advanced: mapping function")[1].split("\n## ")[0];
+	describe("docs/mapping-function.md", () => {
+		const section = read("docs/mapping-function.md");
 		const blocks = (language) =>
 			[...section.matchAll(new RegExp("```" + language + "\\n([\\s\\S]*?)```", "g"))].map((match) => match[1]);
 		const payloads = blocks("json").map((block) => JSON.parse(block));
@@ -937,14 +943,14 @@ describe(MODULE_NAME, () => {
 			instance.notificationReceived("MQTT_MESSAGE", {...payloads[0], topic: "home/kitchen/co2"});
 			assert.equal(shown(instance).value, "—");
 			instance.notificationReceived("MQTT_MESSAGE", payloads[0]);
-			assert.deepEqual([shown(instance).value, shown(instance).unit, shown(instance).status], ["812", "ppm", "Gut"]);
+			assert.deepEqual([shown(instance).value, shown(instance).unit, shown(instance).status], ["812", "ppm", "Good"]);
 			assert.deepEqual(logged, []);
 		});
 
 		it("maps a reading from a list and the connection by a function", () => {
 			const {instance, logged, clock} = startInstance(viaMagicMirror(entries[1]).config);
 			instance.notificationReceived("WEATHER_STATION", payloads[1]);
-			assert.deepEqual([shown(instance).value, shown(instance).unit, shown(instance).status], ["81", "%", "Viel zu feucht"]);
+			assert.deepEqual([shown(instance).value, shown(instance).unit, shown(instance).status], ["81", "%", "Far too humid"]);
 			instance.notificationReceived("WEATHER_STATION_STATUS", {...payloads[2], status: "connecting"});
 			instance.notificationReceived("WEATHER_STATION_STATUS", payloads[2]);
 			advance(clock, 60000);
@@ -966,7 +972,7 @@ describe(MODULE_NAME, () => {
 				logged.filter((entry) => entry.message.includes("transform")),
 				[{level: "error", message}]
 			);
-			assert.ok(section.includes(message), "the README quotes the message");
+			assert.ok(section.includes(message), "the page quotes the message");
 		});
 	});
 

@@ -602,7 +602,7 @@ them in `config/custom.css`:
 | `--ring-gauge-good`, `--ring-gauge-warn`, `--ring-gauge-bad`, `--ring-gauge-cold` | `#4ade80`, `#fbbf24`, `#f87171`, `#38bdf8` |
 | `--ring-gauge-text`, `--ring-gauge-label`, `--ring-gauge-unit` | text colors |
 | `--ring-gauge-unavailable` | `var(--ring-gauge-warn)` – color of the "link broken" symbol |
-| `--ring-gauge-gap` | `2.4rem` – space between the rings of a group |
+| `--ring-gauge-gap` | `2.4rem`, on the [panel](#panel) `0.2em` – space between the rings of a group |
 | `--ring-gauge-max-width` | `100%` – limit of a group's width, at most the region's |
 
 Size and gap are in `rem`, so the gauge grows with MagicMirror's
@@ -651,7 +651,10 @@ A group of rings can stand on one pane of glass instead of a disc each:
 ```
 
 The panel takes `--ring-gauge-scrim` and `--ring-gauge-rim` like the
-discs. With `classes: "ring-gauge-panel ring-gauge-blur"`, the panel is
+discs. On the panel, the rings stand closer: `--ring-gauge-gap` is
+`0.2em`, so that the rings stand as far apart as from the panel's edge.
+`layout.gap` or `--ring-gauge-gap` in `config/custom.css` replaces it.
+With `classes: "ring-gauge-panel ring-gauge-blur"`, the panel is
 frosted instead of each disc.
 
 ### WallberryTheme

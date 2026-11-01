@@ -108,6 +108,16 @@
 /* One pane of glass behind all rings, opt in with
    `classes: "ring-gauge-panel"`: it takes the place of the rings' own
    discs. */
+
+/* Without discs, the arcs mark the rings: each stands 0.6em inside its
+   ring on every side (at the bottom after the margin below). The gap is
+   the padding less 0.6em, so that arcs stand as far apart as from the
+   panel's edge. In em, as it is used in the row; :where keeps the
+   specificity of `.MMM-RingGauge`, so custom.css still overrides it. */
+.MMM-RingGauge:where(.ring-gauge-panel) {
+  --ring-gauge-gap: 0.2em;
+}
+
 .ring-gauge-panel .ring-gauge-row {
   --ring-gauge-row-padding: 0.8em;
   border-radius: 1.6em;

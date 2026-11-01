@@ -3,7 +3,9 @@
 A [MagicMirror²](https://magicmirror.builders/) module that shows one sensor
 reading as a three-quarter ring: colored bands for the scale, a marker for
 the value and a status word for the assessment, e.g. CO₂ "Gut" or
-"Jetzt lüften". Several instances show several readings side by side.
+"Jetzt lüften". One instance shows a group of such rings in one row, e.g.
+CO₂, humidity and temperature of a room; see
+[Several readings side by side](#several-readings-side-by-side).
 
 The gauge stays readable on busy background photos thanks to a disc of
 tinted glass, frosted if you like, and takes the mirror's font, so it fits themes such as
@@ -258,6 +260,95 @@ Display:
 "preset" is the part of the [preset](#presets) for the reading's
 quantity; without one, `label` and `icon` stay empty.
 
+Group, see [Several readings side by side](#several-readings-side-by-side):
+
+| Option | Default | Type | Description |
+| --- | --- | --- | --- |
+| `rings` | none | array | One ring per entry, each with the options above. The options outside `rings` are the defaults of every entry. Without `rings`, the instance shows one ring. |
+| `layout` | see below | object | The row of the rings: `{ wrap, gap, maxWidth, align }`. |
+
+`layout.wrap` (default `true`) lets the rings that do not fit wrap into
+a further row; `false` keeps them in one row, and rings that do not fit
+stand out past the row's end. A ring never shrinks. `layout.gap` and
+`layout.maxWidth` take a CSS length such as `"2rem"`; without them, the
+gap is `--ring-gauge-gap` and the row is as wide as its rings, at most
+as wide as the region. `layout.maxWidth` is a limit, not a width: a row
+whose rings need less stays narrower. `layout.align` (`start`, `center`
+or `end`, default `start`) places the rings within each row, e.g. a
+last row with fewer rings.
+
+### Several readings side by side
+
+MagicMirror² stacks the modules of a region one below the other. Several
+instances of the gauge in one region therefore stand in a column, not in
+a row. For a row, give one instance a list of `rings`:
+
+```js
+{
+  module: "MMM-RingGauge",
+  position: "middle_center",
+  header: "Living room",
+  config: {
+    // Defaults for every ring.
+    notification: "HOME_ASSISTANT_READING",
+    fields: {
+      value: "value",
+      unit: "unit",
+      quantity: "quantity",
+      available: "available"
+    },
+    connection: {
+      notification: "HOME_ASSISTANT_CONNECTION",
+      connected: "connected",
+      graceAfter: 30000
+    },
+    layout: { gap: "2rem" },
+    rings: [
+      { match: { name: "co2" }, quantity: "carbon_dioxide", unit: "ppm" },
+      { match: { name: "humidity" }, quantity: "humidity", unit: "%" },
+      { match: { name: "temperature" }, quantity: "temperature", unit: "°C", decimals: 1 }
+    ]
+  }
+}
+```
+
+- Each entry sets what differs from the defaults: here `match` and the
+  fallbacks for the preset.
+- An entry replaces an option as a whole, also an object such as
+  `fields` or `connection`; it never merges with the defaults. An entry
+  with `fields: { value: "state" }` has no paths for `unit`, `quantity`
+  and `available`, so the ring shows no unit from the payload and does
+  not dim for `available: false`. An entry with
+  `connection: { graceAfter: 60000 }` has no `notification` and
+  `connected`, so the ring logs an error and ignores the connection. To
+  change one part, repeat the whole object in the entry. That way a ring
+  that reads from another source takes no paths of the defaults' source.
+- Each ring keeps its own connection state, so rings may read from
+  different sources: give an entry its own `notification`, `fields` and
+  `connection`.
+- `header` is MagicMirror's own option: one heading above the row.
+- For one pane of glass behind all rings instead of a disc each, see
+  [Panel](#panel).
+
+The rings of a group share one `position`: they cannot be hidden or
+moved one by one, and other modules cannot join the row.
+
+Separate instances side by side need a rule in `config/custom.css` on
+their region's container, e.g. for `middle_center`:
+
+```css
+.region.middle.center .container {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 2.4rem;
+}
+```
+
+The rule applies to every module in that region, not only to the
+gauges: use it only in a region that holds nothing else.
+
 ### What the gauge shows
 
 Without any valid value so far, the gauge shows "—" and no marker.
@@ -281,14 +372,21 @@ the correct number and take the outermost band.
 
 ### Configuration errors
 
-Configuration errors do not stop the gauge. Each instance logs every
+Configuration errors do not stop the gauge. Each ring logs every
 problem once as an error in the browser console, named by its `label`
-(or its `notification` without one): a missing `notification`, neither
-`fields.value` nor `transform`, a path of `fields` or
-`connection.connected` that a matching payload lacks, a `transform` that
-throws or returns something other than an object or `null`, `units`
-other than `metric` and `imperial` (the gauge then shows metric). A
-temperature in a unit other than °C and °F is logged as a warning.
+(or its `notification` without one, in a group with its place in
+`rings`, e.g. `HOME_ASSISTANT_READING, ring 0`): a missing
+`notification`, neither `fields.value` nor `transform`, a path of
+`fields` or `connection.connected` that a matching payload lacks, a
+`transform` that throws or returns something other than an object or
+`null`, `units` other than `metric` and `imperial` (the gauge then shows
+metric). A temperature in a unit other than °C and °F is logged as a warning.
+
+A group logs `rings` that is not a list with at least one entry, and
+then shows one ring from the options outside `rings`; an entry that is
+not an object, which it leaves out; and a `layout` that is not an
+object, or a `gap` or `maxWidth` the browser does not take as a CSS
+length, which it ignores.
 
 What the gauge does with such a notification:
 
@@ -500,7 +598,7 @@ them in `config/custom.css`:
 | `--ring-gauge-good`, `--ring-gauge-warn`, `--ring-gauge-bad`, `--ring-gauge-cold` | `#4ade80`, `#fbbf24`, `#f87171`, `#38bdf8` |
 | `--ring-gauge-text`, `--ring-gauge-label`, `--ring-gauge-unit` | text colors |
 | `--ring-gauge-unavailable` | `var(--ring-gauge-warn)` – color of the "link broken" symbol |
-| `--ring-gauge-gap` | `2.4rem` – space between instances in one region |
+| `--ring-gauge-gap` | `2.4rem` – space between the rings of a group |
 
 Both sizes are in `rem`, so the gauge grows with MagicMirror's
 `--font-size` like the other modules do.
@@ -533,6 +631,23 @@ marker moves to a new value. Start MagicMirror² with
 `ELECTRON_ENABLE_GPU=1` so that the GPU does it: MagicMirror² switches
 the GPU off by default, and on the CPU these moments may stutter, on a
 Raspberry Pi as well.
+
+### Panel
+
+A group of rings can stand on one pane of glass instead of a disc each:
+
+```js
+{
+  module: "MMM-RingGauge",
+  position: "middle_center",
+  classes: "ring-gauge-panel",
+  config: { rings: [/* … */] }
+}
+```
+
+The panel takes `--ring-gauge-scrim` and `--ring-gauge-rim` like the
+discs. With `classes: "ring-gauge-panel ring-gauge-blur"`, the panel is
+frosted instead of each disc.
 
 ### WallberryTheme
 
@@ -588,40 +703,40 @@ small steps, and now and then come with `available: false`. Every
 | `dropEvery` | `24` | Ticks per cycle; the connection drops at the end of each. `0` never drops it. |
 | `dropFor` | `3` | Ticks per cycle without connection. |
 
-Three gauges side by side that read from the mock. Add
+A group of three rings that read from the mock. Add
 [WallberryTheme](https://github.com/raywo/WallberryTheme) as its README
 describes, to check them over its background photo:
 
 ```js
 modules: [
   { module: "MMM-FakeReadings" },
-  ...[
-    ["co2", "carbon_dioxide", "ppm"],
-    ["humidity", "humidity", "%"],
-    ["temperature", "temperature", "°C"]
-  ].map(([sensor, quantity, unit]) => ({
+  {
     module: "MMM-RingGauge",
     position: "bottom_center",
     config: {
       notification: "FAKE_READING",
-      match: { sensor: sensor },
       fields: {
         value: "value",
         unit: "unit",
         quantity: "quantity",
         available: "available"
       },
-      quantity: quantity,
-      unit: unit,
       connection: {
         notification: "FAKE_CONNECTION",
         connected: "connected",
         graceAfter: 5000
-      }
+      },
+      rings: [
+        { match: { sensor: "co2" }, quantity: "carbon_dioxide", unit: "ppm" },
+        { match: { sensor: "humidity" }, quantity: "humidity", unit: "%" },
+        { match: { sensor: "temperature" }, quantity: "temperature", unit: "°C" }
+      ]
     }
-  }))
+  }
 ]
 ```
+
+Add `classes: "ring-gauge-panel"` to see them on one pane of glass.
 
 With the defaults, a drop lasts 12 s, so the gauges dim 5 s into it and
 light up again with the next reading.

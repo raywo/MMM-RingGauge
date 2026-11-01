@@ -133,8 +133,12 @@ function startInstance(instanceConfig, mirror = {}) {
 		requestAnimationFrame: () => 0,
 		cancelAnimationFrame: () => {},
 		performance: {now: () => 0},
-		// The colors the tests use; the browser accepts every CSS color.
-		CSS: {supports: (property, value) => property === "color" && /^(#[0-9a-f]{3,8}|var\(--[\w-]+\))$/i.test(value)}
+		// The colors and lengths the tests use; the browser accepts more.
+		CSS: {
+			supports: (property, value) =>
+				(property === "color" && /^(#[0-9a-f]{3,8}|var\(--[\w-]+\))$/i.test(value)) ||
+				((property === "gap" || property === "max-width") && /^\d+(\.\d+)?(rem|em|%)$/.test(value))
+		}
 	});
 	vm.runInContext(read("gauge-logic.js"), context, {filename: "gauge-logic.js"});
 	vm.runInContext(read("source-mapping.js"), context, {filename: "source-mapping.js"});
@@ -174,9 +178,10 @@ function receive(instance, value) {
 }
 
 // What the gauge shows: value, unit, status word, the lost-connection
-// symbol and whether it is dimmed.
-function shown(instance) {
-	const root = instance.dom.root;
+// symbol and whether it is dimmed; of the first ring unless `index`
+// names another.
+function shown(instance, index = 0) {
+	const root = instance.rings[index].dom.root;
 	return {
 		value: root.find("ring-gauge-value").textContent,
 		unit: root.find("ring-gauge-unit").textContent,
@@ -509,7 +514,7 @@ describe(MODULE_NAME, () => {
 			assert.deepEqual(shown(instance), SHOWN);
 			advance(clock, 1);
 			assert.deepEqual(shown(instance), LOST);
-			const active = instance.dom.segments[0];
+			const active = instance.rings[0].dom.segments[0];
 			assert.equal(active.classes.has("ring-gauge-active"), true);
 		});
 
@@ -626,11 +631,11 @@ describe(MODULE_NAME, () => {
 
 	describe("presets and units", () => {
 		const TEMPERATURE = {...READING, quantity: "temperature", unit: "°C"};
-		const segments = (instance) => instance.dom.segments.length;
-		const label = (instance) => instance.dom.label.textContent;
-		const icon = (instance) => (instance.dom.icon.style.display === "none" ? "" : instance.dom.icon.innerHTML);
+		const segments = (instance) => instance.rings[0].dom.segments.length;
+		const label = (instance) => instance.rings[0].dom.label.textContent;
+		const icon = (instance) => (instance.rings[0].dom.icon.style.display === "none" ? "" : instance.rings[0].dom.icon.innerHTML);
 		const marker = (instance) => {
-			const {attributes} = instance.dom.marker;
+			const {attributes} = instance.rings[0].dom.marker;
 			return [attributes.cx, attributes.cy];
 		};
 
@@ -639,7 +644,7 @@ describe(MODULE_NAME, () => {
 			receive(instance, 1200);
 			assert.deepEqual([label(instance), segments(instance), shown(instance).status], ["CO₂", 3, "Ventilate"]);
 			assert.match(icon(instance), /circle/);
-			assert.deepEqual([instance.settings.min, instance.settings.max], [400, 2500]);
+			assert.deepEqual([instance.rings[0].settings.min, instance.rings[0].settings.max], [400, 2500]);
 			assert.deepEqual(logged, []);
 		});
 
@@ -659,7 +664,7 @@ describe(MODULE_NAME, () => {
 			const {instance} = startInstance({...READING, quantity: "humidity", unit: "%"}, {language: "en"});
 			receive(instance, 59.6);
 			assert.deepEqual([shown(instance).value, shown(instance).status], ["60", "Too humid"]);
-			assert.equal(instance.markerAngle, 135 + ((59.6 - 20) / (80 - 20)) * 270);
+			assert.equal(instance.rings[0].markerAngle, 135 + ((59.6 - 20) / (80 - 20)) * 270);
 			receive(instance, 59.4);
 			assert.deepEqual([shown(instance).value, shown(instance).status], ["59", "Optimal"]);
 		});
@@ -672,7 +677,7 @@ describe(MODULE_NAME, () => {
 			assert.deepEqual(logged, []);
 			instance.notificationReceived("TEST_READING", {id: "x", value: 45, kind: "humidity", unit: "%"});
 			assert.deepEqual([label(instance), segments(instance), shown(instance).status], ["Humidity", 4, "Optimal"]);
-			assert.equal(instance.dom.root.find("ring-gauge-scale").children.at(-1), instance.dom.marker);
+			assert.equal(instance.rings[0].dom.root.find("ring-gauge-scale").children.at(-1), instance.rings[0].dom.marker);
 			assert.deepEqual(logged, []);
 		});
 
@@ -723,7 +728,7 @@ describe(MODULE_NAME, () => {
 			receive(instance, 50);
 			assert.equal(label(instance), "Bath");
 			assert.match(icon(instance), /circle/);
-			assert.deepEqual([instance.settings.min, instance.settings.max], [30, 70]);
+			assert.deepEqual([instance.rings[0].settings.min, instance.rings[0].settings.max], [30, 70]);
 			// Halfway along the arc: straight up.
 			assert.deepEqual(marker(instance), ["105.00", "17.00"]);
 			assert.deepEqual(logged, []);
@@ -749,7 +754,7 @@ describe(MODULE_NAME, () => {
 			const {instance, logged} = startInstance(TEMPERATURE, {units: "imperial", language: "en"});
 			receive(instance, 20);
 			assert.deepEqual([shown(instance).value, shown(instance).unit, shown(instance).status], ["68", "°F", "Comfortable"]);
-			assert.deepEqual([instance.settings.min, instance.settings.max], [50, 86]);
+			assert.deepEqual([instance.rings[0].settings.min, instance.rings[0].settings.max], [50, 86]);
 			assert.deepEqual(logged, []);
 		});
 
@@ -829,7 +834,7 @@ describe(MODULE_NAME, () => {
 			const {instance} = startInstance({...READING, quantity: "humidity", unit: "%"}, {units: "imperial"});
 			receive(instance, 45);
 			assert.deepEqual([shown(instance).value, shown(instance).unit], ["45", "%"]);
-			assert.deepEqual([instance.settings.min, instance.settings.max], [20, 80]);
+			assert.deepEqual([instance.rings[0].settings.min, instance.rings[0].settings.max], [20, 80]);
 		});
 
 		for (const [language, expected] of [
@@ -925,6 +930,181 @@ describe(MODULE_NAME, () => {
 				[{level: "error", message}]
 			);
 			assert.ok(section.includes(message), "the README quotes the message");
+		});
+	});
+
+	describe("group of rings", () => {
+		const BANDS = [{to: 100, level: "good", text: "Fine"}];
+		// Three rings from one notification, told apart by `id`.
+		const GROUP = {
+			...BY_PATHS,
+			match: null,
+			bands: BANDS,
+			rings: [
+				{match: {id: "a"}, label: "A"},
+				{match: {id: "b"}, label: "B", decimals: 1},
+				{match: {id: "c"}, label: "C", min: 0, max: 10, bands: [{to: 10, level: "bad", text: "Low"}]}
+			]
+		};
+		const rows = (instance) => instance.getDom();
+
+		it("shows one ring in the row without `rings`", () => {
+			const {instance} = startInstance(BY_PATHS);
+			const row = rows(instance);
+			assert.ok(row.classes.has("ring-gauge-row"));
+			assert.deepEqual(row.children, [instance.rings[0].dom.root]);
+		});
+
+		it("shows one ring per entry, in order, each with its own reading", () => {
+			const {instance, logged} = startInstance(GROUP);
+			assert.deepEqual(
+				rows(instance).children.map((child) => child.find("ring-gauge-head").children[1].textContent),
+				["A", "B", "C"]
+			);
+			instance.notificationReceived("TEST_READING", {id: "b", value: 42});
+			instance.notificationReceived("TEST_READING", {id: "c", value: 3});
+			assert.deepEqual(
+				[0, 1, 2].map((index) => [shown(instance, index).value, shown(instance, index).status]),
+				[["—", ""], ["42.0", "Fine"], ["3", "Low"]]
+			);
+			assert.deepEqual(logged, []);
+		});
+
+		it("takes the options outside `rings` as defaults an entry replaces as a whole", () => {
+			const {instance} = startInstance({
+				...GROUP,
+				rings: [{match: {id: "a"}}, {match: {id: "b"}, fields: {value: "reading"}}]
+			});
+			instance.notificationReceived("TEST_READING", {id: "a", value: 7, reading: 8});
+			instance.notificationReceived("TEST_READING", {id: "b", value: 9, reading: 10});
+			assert.deepEqual([shown(instance, 0).value, shown(instance, 1).value], ["7", "10"]);
+			assert.deepEqual([instance.rings[1].settings.min, instance.rings[1].settings.max], [0, 100]);
+		});
+
+		it("keeps the connection state of each ring", () => {
+			const link = (hub) => ({notification: "TEST_LINK", match: {hub}, connected: "up", graceAfter: 30000});
+			const {instance, clock} = startInstance({
+				...GROUP,
+				connection: link("a"),
+				rings: [{match: {id: "a"}}, {match: {id: "b"}, connection: link("b")}]
+			});
+			instance.notificationReceived("TEST_READING", {id: "a", value: 1});
+			instance.notificationReceived("TEST_READING", {id: "b", value: 2});
+			instance.notificationReceived("TEST_LINK", {hub: "b", up: false});
+			advance(clock, 30000);
+			assert.deepEqual([shown(instance, 0).dimmed, shown(instance, 1).dimmed], [false, true]);
+		});
+
+		it("logs a problem of each ring once, under the ring's name", () => {
+			const {logged} = startInstance({...GROUP, bands: null, rings: [{label: "A"}, {label: "B"}]});
+			assert.deepEqual(
+				logged.map((entry) => entry.message),
+				[`${MODULE_NAME} (A): no bands configured`, `${MODULE_NAME} (B): no bands configured`]
+			);
+		});
+
+		it("names a ring without a label by its notification and its place in `rings`", () => {
+			const {logged} = startInstance({...GROUP, bands: null, rings: [{match: {id: "a"}}, {match: {id: "b"}}]});
+			assert.deepEqual(
+				logged.map((entry) => entry.message),
+				[
+					`${MODULE_NAME} (TEST_READING, ring 0): no bands configured`,
+					`${MODULE_NAME} (TEST_READING, ring 1): no bands configured`
+				]
+			);
+		});
+
+		for (const rings of [{}, [], "co2"]) {
+			it(`shows one ring from the options outside \`rings\` for \`rings: ${JSON.stringify(rings)}\``, () => {
+				const {instance, logged} = startInstance({...GROUP, rings});
+				assert.equal(instance.rings.length, 1);
+				receive(instance, 5);
+				assert.equal(shown(instance).value, "5");
+				assert.deepEqual(logged, [
+					{
+						level: "error",
+						message: `${MODULE_NAME} (TEST_READING): \`rings\` is not a list of rings; showing one ring from the options outside \`rings\``
+					}
+				]);
+			});
+		}
+
+		it("leaves out an entry that is not an object and logs it", () => {
+			const {instance, logged} = startInstance({...GROUP, rings: [null, {match: {id: "b"}, label: "B"}]});
+			assert.equal(instance.rings.length, 1);
+			assert.deepEqual(logged, [
+				{level: "error", message: `${MODULE_NAME} (TEST_READING): ring 0 in \`rings\` is not an object`}
+			]);
+		});
+
+		it("sets gap, maximum width and wrapping from `layout`", () => {
+			const {instance} = startInstance({...GROUP, layout: {wrap: false, gap: "1.5rem", maxWidth: "40rem"}});
+			assert.deepEqual({...rows(instance).style}, {flexWrap: "nowrap", gap: "1.5rem", maxWidth: "40rem"});
+		});
+
+		it("leaves the row to the CSS with the default layout", () => {
+			const {instance, logged} = startInstance(GROUP);
+			assert.deepEqual({...rows(instance).style}, {});
+			assert.deepEqual(logged, []);
+		});
+
+		it("ignores and logs what `layout` holds that the browser does not take", () => {
+			const {instance, logged} = startInstance({...GROUP, layout: {gap: 12, maxWidth: "wide"}});
+			assert.deepEqual({...rows(instance).style}, {});
+			assert.deepEqual(
+				logged.map((entry) => entry.message),
+				[
+					`${MODULE_NAME} (TEST_READING): \`layout.gap\` 12 is not a CSS length, e.g. "2rem"`,
+					`${MODULE_NAME} (TEST_READING): \`layout.maxWidth\` "wide" is not a CSS length, e.g. "2rem"`
+				]
+			);
+		});
+
+		it("runs the example of the README", () => {
+			const section = read("README.md").split("### Several readings side by side")[1].split("\n### ")[0];
+			const [block] = section.match(/```js\n([\s\S]*?)```/).slice(1);
+			const entry = vm.runInNewContext(`(${block})`);
+			const {instance, logged} = startInstance(entry.config);
+			const readings = [
+				["co2", 812, "ppm", "carbon_dioxide"],
+				["humidity", 48, "%", "humidity"],
+				["temperature", 21.46, "°C", "temperature"]
+			];
+			for (const [name, value, unit, quantity] of readings) {
+				instance.notificationReceived("HOME_ASSISTANT_READING", {name, value, unit, quantity, available: true});
+			}
+			assert.deepEqual(
+				[0, 1, 2].map((index) => shown(instance, index).value),
+				["812", "48", "21.5"]
+			);
+			assert.equal(rows(instance).style.gap, "2rem");
+			assert.deepEqual(logged, []);
+		});
+
+		for (const [align, justifyContent] of [["center", "center"], ["end", "flex-end"]]) {
+			it(`aligns the rings of each row for \`layout.align: "${align}"\``, () => {
+				const {instance, logged} = startInstance({...GROUP, layout: {align}});
+				assert.deepEqual({...rows(instance).style}, {justifyContent});
+				assert.deepEqual(logged, []);
+			});
+		}
+
+		it("ignores and logs an unknown `layout.align`", () => {
+			const {instance, logged} = startInstance({...GROUP, layout: {align: "middle"}});
+			assert.deepEqual({...rows(instance).style}, {});
+			assert.deepEqual(logged.map((entry) => entry.message), [
+				`${MODULE_NAME} (TEST_READING): \`layout.align\` "middle" is not one of start, center, end`
+			]);
+		});
+
+		it("never lets the row shrink a ring", () => {
+			const rule = read(`${MODULE_NAME}.css`).match(/\n\.ring-gauge \{([^}]*)\}/)[1];
+			assert.match(rule, /flex-shrink: 0;/);
+		});
+
+		it("logs a `layout` that is not an object", () => {
+			const {logged} = startInstance({...GROUP, layout: "row"});
+			assert.deepEqual(logged.map((entry) => entry.message), [`${MODULE_NAME} (TEST_READING): \`layout\` is not an object`]);
 		});
 	});
 });

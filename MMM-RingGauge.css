@@ -17,20 +17,28 @@
   --ring-gauge-gap: 2.4rem;
 }
 
-/* Several instances in one region sit side by side. */
-.module.MMM-RingGauge {
-  display: inline-block;
-  vertical-align: top;
-}
-
-.module.MMM-RingGauge + .module.MMM-RingGauge {
-  margin-left: var(--ring-gauge-gap);
+/* The rings of one instance in a row. MagicMirror² stacks the modules of
+   a region; this row lays out only the rings of its own instance. The
+   width follows the rings, so the region's alignment places the row. The
+   options in `layout` set gap, maximum width and wrapping inline. */
+.ring-gauge-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ring-gauge-gap);
+  width: fit-content;
+  max-width: 100%;
+  /* 1em as inside a ring, for the panel's sizes. */
+  font-size: calc(var(--ring-gauge-size) / 10.5);
 }
 
 /* A disc of tinted glass: dark enough in the middle that the text reads
    on a bright photo, lit on its rim from the top left. */
 .ring-gauge {
   position: relative;
+  /* Its content is positioned absolutely, so a row would squeeze the
+     disc into an oval; it keeps its size and wraps or overflows. */
+  flex-shrink: 0;
   width: var(--ring-gauge-size);
   height: var(--ring-gauge-size);
   border-radius: 50%;
@@ -75,6 +83,57 @@
    disables it unless ELECTRON_ENABLE_GPU=1 is set. */
 .ring-gauge-blur .ring-gauge {
   backdrop-filter: blur(var(--ring-gauge-blur)) saturate(1.4);
+}
+
+/* One pane of glass behind all rings, opt in with
+   `classes: "ring-gauge-panel"`: it takes the place of the rings' own
+   discs. */
+.ring-gauge-panel .ring-gauge-row {
+  padding: 0.8em;
+  border-radius: 1.6em;
+  background: color-mix(in srgb, var(--ring-gauge-scrim) 60%, transparent);
+  box-shadow:
+    inset 0.08em 0.08em 0.04em -0.04em var(--ring-gauge-rim),
+    inset -0.06em -0.06em 0.04em -0.04em color-mix(in srgb, var(--ring-gauge-rim) 40%, transparent),
+    inset 0 0 1.2em color-mix(in srgb, var(--ring-gauge-rim) 12%, transparent),
+    0 0.3em 1em rgba(0, 0, 0, 0.35);
+}
+
+.ring-gauge-panel .ring-gauge-row::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--ring-gauge-rim) 22%, transparent) 0,
+    transparent 45%
+  );
+  pointer-events: none;
+}
+
+.ring-gauge-panel .ring-gauge {
+  background: none;
+  box-shadow: none;
+  /* The arc is open at the bottom: its ends, with the marker on one,
+     reach about 1.7em above the ring's lower edge, its top 0.6em below
+     the upper edge. Without the disc, that space would read as more
+     padding below than above, and as a wider gap between wrapped
+     rows. */
+  margin-bottom: -1.1em;
+}
+
+.ring-gauge-panel .ring-gauge::before {
+  content: none;
+}
+
+/* With the panel, the panel is frosted instead of each disc. */
+.ring-gauge-blur.ring-gauge-panel .ring-gauge-row {
+  backdrop-filter: blur(var(--ring-gauge-blur)) saturate(1.4);
+}
+
+.ring-gauge-blur.ring-gauge-panel .ring-gauge {
+  backdrop-filter: none;
 }
 
 .ring-gauge-scale {

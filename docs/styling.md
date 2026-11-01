@@ -71,7 +71,7 @@ how MagicMirror² runs:
 
 A group of rings can stand on one pane of glass instead of a disc each:
 
-![The CO₂ and humidity gauges from above on one pane of
+![A CO₂ and a humidity gauge as a group on one pane of
 glass](../images/panel.png)
 
 ```js

@@ -242,6 +242,9 @@ a row. For a row, give one instance a list of `rings`:
 - For one pane of glass behind all rings instead of a disc each, see
   [Panel](docs/styling.md#panel).
 
+![The CO₂ and humidity gauges from the screenshot above, as a group on
+one pane of glass](images/panel.png)
+
 The rings of a group share one `position`: they cannot be hidden or
 moved one by one, and other modules cannot join the row.
 

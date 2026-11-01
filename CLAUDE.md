@@ -2,9 +2,10 @@
 
 ## What this is
 
-A MagicMirror² module (`MMM-RingGauge`) that shows one reading per
-instance as a three-quarter ring with colored bands, a marker and a status
-word. Users clone it into `MagicMirror/modules/`.
+A MagicMirror² module (`MMM-RingGauge`) that shows readings as
+three-quarter rings with colored bands, a marker and a status word: one
+ring per instance, or with `rings` a group in one row. Users clone it into
+`MagicMirror/modules/`.
 
 ## Target architecture
 

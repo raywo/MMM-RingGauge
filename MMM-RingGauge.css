@@ -4,6 +4,8 @@
 .MMM-RingGauge {
   --ring-gauge-size: 10.5rem;
   --ring-gauge-scrim: rgb(8, 10, 14);
+  --ring-gauge-rim: rgba(255, 255, 255, 0.55);
+  --ring-gauge-blur: 0.6em;
   --ring-gauge-good: #4ade80;
   --ring-gauge-warn: #fbbf24;
   --ring-gauge-bad: #f87171;
@@ -25,8 +27,8 @@
   margin-left: var(--ring-gauge-gap);
 }
 
-/* A soft dark halo without an edge. No backdrop-filter: blurring the
-   large background photo is too slow on a Raspberry Pi. */
+/* A disc of frosted, tinted glass: dark enough in the middle that the
+   text reads on a bright photo, lit on its rim from the top left. */
 .ring-gauge {
   position: relative;
   width: var(--ring-gauge-size);
@@ -37,13 +39,43 @@
   font-size: calc(var(--ring-gauge-size) / 10.5);
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--ring-gauge-scrim) 72%, transparent) 0 70%,
-    color-mix(in srgb, var(--ring-gauge-scrim) 45%, transparent) 84%,
-    transparent 100%
+    color-mix(in srgb, var(--ring-gauge-scrim) 68%, transparent) 0 62%,
+    color-mix(in srgb, var(--ring-gauge-scrim) 50%, transparent) 100%
   );
+  box-shadow:
+    /* Light on the rim, bright top left, faint bottom right. */
+    inset 0.08em 0.08em 0.04em -0.04em var(--ring-gauge-rim),
+    inset -0.06em -0.06em 0.04em -0.04em color-mix(in srgb, var(--ring-gauge-rim) 40%, transparent),
+    /* The glass thickens towards its edge. */
+    inset 0 0 1.2em color-mix(in srgb, var(--ring-gauge-rim) 12%, transparent),
+    /* Lifts the disc off the photo. */
+    0 0.3em 1em rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(var(--ring-gauge-blur)) saturate(1.4);
   /* No font-family: the gauge takes the mirror's font, which a theme
      may replace. */
   text-shadow: none;
+}
+
+/* Sheen on the upper left of the glass, beneath ring and text. */
+.ring-gauge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--ring-gauge-rim) 22%, transparent) 0,
+    transparent 45%
+  );
+  pointer-events: none;
+}
+
+/* Clear glass for hardware too slow to blur: the blur is redone on every
+   frame in which the photo or the gauge changes, on the CPU where
+   Chromium has no GPU compositing. Opt out with
+   `classes: "ring-gauge-no-blur"` in the module's config. */
+.ring-gauge-no-blur .ring-gauge {
+  backdrop-filter: none;
 }
 
 .ring-gauge-scale {

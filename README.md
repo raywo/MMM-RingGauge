@@ -5,8 +5,8 @@ reading as a three-quarter ring: colored bands for the scale, a marker for
 the value and a status word for the assessment, e.g. CO₂ "Gut" or
 "Jetzt lüften". Several instances show several readings side by side.
 
-The gauge stays readable on busy background photos thanks to a soft dark
-halo, and takes the mirror's font, so it fits themes such as
+The gauge stays readable on busy background photos thanks to a disc of
+frosted glass, and takes the mirror's font, so it fits themes such as
 [WallberryTheme](https://github.com/raywo/WallberryTheme).
 
 ## Data sources
@@ -189,7 +189,7 @@ bands: [
 ]
 ```
 
-The level colors are chosen to stay readable on the halo over a bright
+The level colors are chosen to stay readable on the glass over a bright
 photo. Whether a free `color` does is up to you.
 
 ### Units
@@ -494,7 +494,9 @@ them in `config/custom.css`:
 | Property | Default |
 | --- | --- |
 | `--ring-gauge-size` | `10.5rem` – width of the gauge; text and ring grow with it |
-| `--ring-gauge-scrim` | `rgb(8, 10, 14)` – color of the halo |
+| `--ring-gauge-scrim` | `rgb(8, 10, 14)` – tint of the glass |
+| `--ring-gauge-rim` | `rgba(255, 255, 255, 0.55)` – light on the glass's rim and its sheen |
+| `--ring-gauge-blur` | `0.6em` – blur behind the glass |
 | `--ring-gauge-good`, `--ring-gauge-warn`, `--ring-gauge-bad`, `--ring-gauge-cold` | `#4ade80`, `#fbbf24`, `#f87171`, `#38bdf8` |
 | `--ring-gauge-text`, `--ring-gauge-label`, `--ring-gauge-unit` | text colors |
 | `--ring-gauge-unavailable` | `var(--ring-gauge-warn)` – color of the "link broken" symbol |
@@ -503,7 +505,38 @@ them in `config/custom.css`:
 Both sizes are in `rem`, so the gauge grows with MagicMirror's
 `--font-size` like the other modules do.
 
-With WallberryTheme, the halo can take the hue of the photo. Without a
+### Frosted glass
+
+The glass blurs the photo behind it. The browser redoes the blur on
+every frame in which the photo or the gauge changes: while the photo
+fades to the next one, and while the marker moves to a new value. With
+GPU acceleration, which a Raspberry Pi 4 or 5 offers, that should cost
+little. Without it, e.g. on older models or with the GPU switched off,
+these moments may stutter.
+
+If they do, or if you prefer clear glass, switch the blur off per
+instance:
+
+```js
+{
+  module: "MMM-RingGauge",
+  position: "top_left",
+  classes: "ring-gauge-no-blur",
+  config: { /* … */ }
+}
+```
+
+or for all instances in `config/custom.css`:
+
+```css
+.MMM-RingGauge .ring-gauge {
+  backdrop-filter: none;
+}
+```
+
+### WallberryTheme
+
+With WallberryTheme, the glass can take the hue of the photo. Without a
 photo, `--wb-tint-dark` is invalid and the fallback applies:
 
 ```css

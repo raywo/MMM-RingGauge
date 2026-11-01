@@ -27,8 +27,8 @@
   margin-left: var(--ring-gauge-gap);
 }
 
-/* A disc of frosted, tinted glass: dark enough in the middle that the
-   text reads on a bright photo, lit on its rim from the top left. */
+/* A disc of tinted glass: dark enough in the middle that the text reads
+   on a bright photo, lit on its rim from the top left. */
 .ring-gauge {
   position: relative;
   width: var(--ring-gauge-size);
@@ -50,7 +50,6 @@
     inset 0 0 1.2em color-mix(in srgb, var(--ring-gauge-rim) 12%, transparent),
     /* Lifts the disc off the photo. */
     0 0.3em 1em rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(var(--ring-gauge-blur)) saturate(1.4);
   /* No font-family: the gauge takes the mirror's font, which a theme
      may replace. */
   text-shadow: none;
@@ -70,12 +69,12 @@
   pointer-events: none;
 }
 
-/* Clear glass for hardware too slow to blur: the blur is redone on every
-   frame in which the photo or the gauge changes, on the CPU where
-   Chromium has no GPU compositing. Opt out with
-   `classes: "ring-gauge-no-blur"` in the module's config. */
-.ring-gauge-no-blur .ring-gauge {
-  backdrop-filter: none;
+/* Frosted glass, opt in with `classes: "ring-gauge-blur"` in the
+   module's config. The blur is redone on every frame in which the photo
+   or the gauge changes, on the CPU unless the GPU is on: MagicMirror²
+   disables it unless ELECTRON_ENABLE_GPU=1 is set. */
+.ring-gauge-blur .ring-gauge {
+  backdrop-filter: blur(var(--ring-gauge-blur)) saturate(1.4);
 }
 
 .ring-gauge-scale {

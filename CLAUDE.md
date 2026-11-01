@@ -42,9 +42,10 @@ word. Users clone it into `MagicMirror/modules/`.
   sends one, else from the time of receipt.
 - Never mark a lost connection before the configured grace period: a
   source may drop briefly, e.g. while Home Assistant restarts.
-- Keep the class `ring-gauge-no-blur` switching `backdrop-filter` off:
-  without GPU compositing, e.g. on older Raspberry Pis, the blur may be
-  too slow.
+- Keep `backdrop-filter` off by default and on only with the class
+  `ring-gauge-blur`: MagicMirror² disables the GPU unless
+  `ELECTRON_ENABLE_GPU=1` is set, and on the CPU the blur may be too
+  slow.
 - Do not set `font-family`: the gauge takes the mirror's font so that
   themes apply.
 - Sizes and colors stay CSS custom properties on `.MMM-RingGauge`.

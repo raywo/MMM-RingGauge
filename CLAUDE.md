@@ -46,6 +46,8 @@ word. Users clone it into `MagicMirror/modules/`.
 - Do not set `font-family`: the gauge takes the mirror's font so that
   themes apply.
 - Sizes and colors stay CSS custom properties on `.MMM-RingGauge`.
+- Give sizes in `rem` or `em`, never `px`: the gauge grows with the
+  mirror's `--font-size`, its content with `--ring-gauge-size`.
 - Do not reference a theme's variables in the module; themes are bound in
   the user's `custom.css` (see README, "Styling").
 - A new user-facing string goes into every file in `translations/`.

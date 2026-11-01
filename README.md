@@ -493,12 +493,15 @@ them in `config/custom.css`:
 
 | Property | Default |
 | --- | --- |
-| `--ring-gauge-size` | `210px` |
+| `--ring-gauge-size` | `10.5rem` – width of the gauge; text and ring grow with it |
 | `--ring-gauge-scrim` | `rgb(8, 10, 14)` – color of the halo |
 | `--ring-gauge-good`, `--ring-gauge-warn`, `--ring-gauge-bad`, `--ring-gauge-cold` | `#4ade80`, `#fbbf24`, `#f87171`, `#38bdf8` |
 | `--ring-gauge-text`, `--ring-gauge-label`, `--ring-gauge-unit` | text colors |
 | `--ring-gauge-unavailable` | `var(--ring-gauge-warn)` – color of the "link broken" symbol |
-| `--ring-gauge-gap` | `48px` – space between instances in one region |
+| `--ring-gauge-gap` | `2.4rem` – space between instances in one region |
+
+Both sizes are in `rem`, so the gauge grows with MagicMirror's
+`--font-size` like the other modules do.
 
 With WallberryTheme, the halo can take the hue of the photo. Without a
 photo, `--wb-tint-dark` is invalid and the fallback applies:

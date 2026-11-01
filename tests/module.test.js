@@ -725,7 +725,7 @@ describe(MODULE_NAME, () => {
 			assert.match(icon(instance), /circle/);
 			assert.deepEqual([instance.settings.min, instance.settings.max], [30, 70]);
 			// Halfway along the arc: straight up.
-			assert.deepEqual(marker(instance), ["105.00", "27.00"]);
+			assert.deepEqual(marker(instance), ["105.00", "17.00"]);
 			assert.deepEqual(logged, []);
 
 			const hidden = startInstance({...READING, quantity: "humidity", label: "", icon: ""}, {language: "en"}).instance;

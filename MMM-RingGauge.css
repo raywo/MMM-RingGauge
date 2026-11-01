@@ -31,8 +31,8 @@
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    color-mix(in srgb, var(--ring-gauge-scrim) 72%, transparent) 0 62%,
-    color-mix(in srgb, var(--ring-gauge-scrim) 45%, transparent) 74%,
+    color-mix(in srgb, var(--ring-gauge-scrim) 72%, transparent) 0 70%,
+    color-mix(in srgb, var(--ring-gauge-scrim) 45%, transparent) 84%,
     transparent 100%
   );
   /* No font-family: the gauge takes the mirror's font, which a theme
@@ -49,7 +49,7 @@
 
 .ring-gauge-segment {
   fill: none;
-  stroke-width: 9;
+  stroke-width: 10;
   stroke-linecap: butt;
   stroke-opacity: 0.3;
 }
@@ -96,16 +96,16 @@
   align-items: center;
   gap: 4px;
   color: var(--ring-gauge-label);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
-  line-height: 16px;
+  line-height: 18px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
 .ring-gauge-icon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -115,7 +115,7 @@
 
 .ring-gauge-value {
   color: var(--ring-gauge-text);
-  font-size: 46px;
+  font-size: 52px;
   font-weight: 300;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -123,16 +123,16 @@
 
 .ring-gauge-unit {
   color: var(--ring-gauge-unit);
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 400;
   line-height: 1;
 }
 
 .ring-gauge-status {
   margin-top: 4px;
-  min-height: 14px;
+  min-height: 16px;
   color: var(--ring-gauge-unit);
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.04em;
@@ -167,11 +167,11 @@
 
 /* The symbol is the only sign that the value is not current, so it is
    larger than the status word and takes a signal color. The negative
-   margins keep the 18 px of the status line (4 px above, 14 px high), so
+   margins keep the 20 px of the status line (4 px above, 16 px high), so
    the value does not move when the gauge dims. */
 .ring-gauge-unavailable-icon {
-  width: 24px;
-  height: 24px;
-  margin: -1px 0 -5px;
+  width: 27px;
+  height: 27px;
+  margin: -1px 0 -6px;
   color: var(--ring-gauge-unavailable);
 }

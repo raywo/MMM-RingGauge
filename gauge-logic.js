@@ -14,7 +14,7 @@
 })(this, function () {
   // Geometry in SVG user units; the SVG scales with --ring-gauge-size.
   const CENTER = 105;
-  const RADIUS = 78;
+  const RADIUS = 88;
   const START_ANGLE = 135;
   const SWEEP = 270;
   const ARC_LENGTH = 2 * Math.PI * RADIUS * (SWEEP / 360);

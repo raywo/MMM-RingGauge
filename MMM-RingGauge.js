@@ -193,7 +193,7 @@ Module.register("MMM-RingGauge", {
 
     // Segments, icon and label follow the settings: drawSettings().
     const svg = this.svgElement("svg", { class: "ring-gauge-scale", viewBox: "0 0 210 210" });
-    const marker = this.svgElement("circle", { class: "ring-gauge-marker", r: 8 });
+    const marker = this.svgElement("circle", { class: "ring-gauge-marker", r: 9 });
     svg.appendChild(marker);
     root.appendChild(svg);
 

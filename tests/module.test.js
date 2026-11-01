@@ -132,7 +132,9 @@ function startInstance(instanceConfig, mirror = {}) {
 		clearTimeout: (id) => clock.timers.delete(id),
 		requestAnimationFrame: () => 0,
 		cancelAnimationFrame: () => {},
-		performance: {now: () => 0}
+		performance: {now: () => 0},
+		// The colors the tests use; the browser accepts every CSS color.
+		CSS: {supports: (property, value) => property === "color" && /^(#[0-9a-f]{3,8}|var\(--[\w-]+\))$/i.test(value)}
 	});
 	vm.runInContext(read("gauge-logic.js"), context, {filename: "gauge-logic.js"});
 	vm.runInContext(read("source-mapping.js"), context, {filename: "source-mapping.js"});
@@ -241,7 +243,7 @@ describe(MODULE_NAME, () => {
 				logged.map((entry) => entry.message),
 				[
 					`${MODULE_NAME} (X): band 1: \`to\` 40 does not ascend from 60`,
-					`${MODULE_NAME} (X): band 1: unknown level "critical", expected one of good, warn, bad`,
+					`${MODULE_NAME} (X): band 1: unknown level "critical", expected one of good, warn, bad, cold`,
 					`${MODULE_NAME} (X): bands end at 40, before max 100`
 				]
 			);
@@ -254,6 +256,59 @@ describe(MODULE_NAME, () => {
 			const status = instance.getDom().find("ring-gauge-status");
 			assert.equal(status.textContent, "Odd");
 			assert.equal(status.className, "ring-gauge-status");
+		});
+
+		// The segments in band order, and the status word for a value.
+		const painted = (bands, value) => {
+			const {instance, logged} = startInstance({...BY_PATHS, label: "X", bands});
+			receive(instance, value);
+			const root = instance.getDom();
+			const segments = root.find("ring-gauge-scale").children.filter((child) => child.classes.has("ring-gauge-segment"));
+			return {segments, status: root.find("ring-gauge-status"), logged};
+		};
+
+		it("draws a cold band and its status word in the cold color", () => {
+			const {segments, status, logged} = painted([{to: 20, level: "cold", text: "Cool"}, {to: 100, level: "good"}], 10);
+			assert.equal(segments[0].className, "ring-gauge-segment ring-gauge-cold ring-gauge-active");
+			assert.equal(status.className, "ring-gauge-status ring-gauge-cold");
+			assert.deepEqual(logged, []);
+		});
+
+		it("draws a band with its own `color` and its status word in it", () => {
+			const {segments, status, logged} = painted([{to: 20, color: "#60a5fa", text: "Cool"}, {to: 100, level: "good"}], 10);
+			assert.equal(segments[0].className, "ring-gauge-segment ring-gauge-active");
+			assert.equal(segments[0].style.stroke, "#60a5fa");
+			assert.equal(status.className, "ring-gauge-status");
+			assert.equal(status.style.color, "#60a5fa");
+			assert.deepEqual(logged, []);
+		});
+
+		it("lets `color` win over `level`", () => {
+			const {segments, status} = painted([{to: 20, level: "warn", color: "var(--my-cold)", text: "Cool"}, {to: 100, level: "good"}], 10);
+			assert.equal(segments[0].classes.has("ring-gauge-warn"), false);
+			assert.equal(segments[0].style.stroke, "var(--my-cold)");
+			assert.equal(status.className, "ring-gauge-status");
+			assert.equal(status.style.color, "var(--my-cold)");
+		});
+
+		it("leaves a gap for an invalid `color` and shows its text uncolored", () => {
+			const {segments, status, logged} = painted([{to: 20, level: "cold", color: "blau", text: "Cool"}, {to: 100, level: "good"}], 10);
+			assert.equal(segments[0].className, "ring-gauge-segment ring-gauge-active");
+			assert.equal(segments[0].style.stroke, undefined);
+			assert.equal(status.textContent, "Cool");
+			assert.equal(status.className, "ring-gauge-status");
+			assert.equal(status.style.color, "");
+			assert.deepEqual(logged.map((entry) => entry.message), [`${MODULE_NAME} (X): band 0: \`color\` "blau" is not a CSS color`]);
+		});
+
+		it("drops the own color of the status word in another band", () => {
+			const bands = [{to: 20, color: "#60a5fa", text: "Cool"}, {to: 100, level: "good", text: "Fine"}];
+			const {instance} = startInstance({...BY_PATHS, bands});
+			receive(instance, 10);
+			receive(instance, 50);
+			const status = instance.getDom().find("ring-gauge-status");
+			assert.equal(status.className, "ring-gauge-status ring-gauge-good");
+			assert.equal(status.style.color, "");
 		});
 
 		it("draws a band narrower than the gap with length 0", () => {

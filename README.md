@@ -7,8 +7,13 @@ the value and a status word for the assessment, e.g. CO₂ "Gut" or
 CO₂, humidity and temperature of a room; see
 [Several readings side by side](#several-readings-side-by-side).
 
+![CO₂ and humidity gauges on a forest photo: CO₂ at 1350 ppm with the
+status "Lüften", humidity at 48 % with the status
+"Optimal"](images/screenshot.png)
+
 The gauge stays readable on busy background photos thanks to a disc of
-tinted glass, frosted if you like, and takes the mirror's font, so it fits themes such as
+tinted glass, frosted if you like, and takes the mirror's font, so it
+fits themes such as
 [WallberryTheme](https://github.com/raywo/WallberryTheme).
 
 ## Data sources
@@ -40,7 +45,18 @@ cd ~/MagicMirror/modules
 git clone https://github.com/raywo/MMM-RingGauge.git
 ```
 
-The module has no dependencies.
+The module has no dependencies. Add it to `config/config.js` as
+[Configuration](#configuration) describes, then restart MagicMirror².
+
+## Update
+
+```bash
+cd ~/MagicMirror/modules/MMM-RingGauge
+git pull
+```
+
+Then restart MagicMirror². [CHANGELOG.md](CHANGELOG.md) lists what
+changed and whether a config needs to change with it.
 
 ## Configuration
 
@@ -71,7 +87,7 @@ the connection changes:
       graceAfter: 30000
     }
   }
-}
+},
 ```
 
 The provider sends the quantity, here `carbon_dioxide`, so the gauge
@@ -116,7 +132,7 @@ A source that sends `AIR_SENSOR_UPDATE` with this payload:
     quantity: "humidity",
     staleAfter: 15 * 60 * 1000
   }
-}
+},
 ```
 
 The payload holds no quantity, so `quantity` names it and the gauge takes
@@ -317,7 +333,7 @@ a row. For a row, give one instance a list of `rings`:
       { match: { name: "temperature" }, quantity: "temperature", unit: "°C", decimals: 1 }
     ]
   }
-}
+},
 ```
 
 - Each entry sets what differs from the defaults: here `match` and the
@@ -499,7 +515,7 @@ A source sends `MQTT_MESSAGE` with the unit inside the value:
       { to: 2500, level: "bad", text: "Jetzt lüften" }
     ]
   }
-}
+},
 ```
 
 ### Readings in a list, and the connection by a function
@@ -562,7 +578,7 @@ for `connecting`, which leaves the state as it is:
       { to: 100, level: "bad", text: "Viel zu feucht" }
     ]
   }
-}
+},
 ```
 
 ### What fails: a helper from elsewhere in `config.js`
@@ -572,21 +588,19 @@ That works in plain JavaScript, but not here: MagicMirror² passes only the
 function's source text to the browser, where `parsePpm` does not exist.
 
 ```js
+// At the top of config.js:
 const parsePpm = (text) => Number.parseFloat(text);
 
-let config = {
-  modules: [
-    {
-      module: "MMM-RingGauge",
-      position: "top_left",
-      config: {
-        notification: "MQTT_MESSAGE",
-        transform: (payload) => ({ value: parsePpm(payload.message) }),
-        label: "CO₂"
-      }
-    }
-  ]
-};
+// Further down, among the modules:
+{
+  module: "MMM-RingGauge",
+  position: "top_left",
+  config: {
+    notification: "MQTT_MESSAGE",
+    transform: (payload) => ({ value: parsePpm(payload.message) }),
+    label: "CO₂"
+  }
+},
 ```
 
 The gauge keeps showing "—", and the browser console shows once:
@@ -624,7 +638,7 @@ not blur it. To frost it, switch the blur on per instance:
   position: "top_left",
   classes: "ring-gauge-blur",
   config: { /* … */ }
-}
+},
 ```
 
 or for all instances in `config/custom.css`:
@@ -646,13 +660,16 @@ Raspberry Pi as well.
 
 A group of rings can stand on one pane of glass instead of a disc each:
 
+![The CO₂ and humidity gauges from above on one pane of
+glass](images/panel.png)
+
 ```js
 {
   module: "MMM-RingGauge",
   position: "middle_center",
   classes: "ring-gauge-panel",
   config: { rings: [/* … */] }
-}
+},
 ```
 
 The panel takes `--ring-gauge-scrim` and `--ring-gauge-rim` like the
@@ -673,6 +690,60 @@ photo, `--wb-tint-dark` is invalid and the fallback applies:
 }
 ```
 
+## Troubleshooting
+
+The gauge writes its messages to the browser console, each starting
+with `MMM-RingGauge`. Open it in the browser that shows the mirror, or
+start MagicMirror² with `node --run start:dev` on the mirror itself.
+
+### No reading arrives
+
+The gauge keeps showing "—" and logs nothing: it cannot tell a source
+that has not sent yet from a notification it does not listen to.
+
+- Check that the source module is in `config/config.js` and runs; its
+  own README names the log lines that show it.
+- Compare `notification` with the name the source sends, letter by
+  letter: `HOME_ASSISTANT_READING` and `HOME_ASSISTANT_READINGS` are two
+  notifications.
+- To see what arrives, replace `match` and `fields` for a moment with a
+  function that logs every payload and shows nothing:
+
+  ```js
+  transform: (payload) => {
+    Log.log("MMM-RingGauge payload", payload);
+    return null;
+  }
+  ```
+
+  No line in the console means that no notification of that name
+  arrives. Remove the function again afterwards.
+
+### `match` or a path in `fields` does not fit the payload
+
+Compare the logged payload with the config:
+
+- `match` compares with `===`: `{ id: "3" }` does not match a payload
+  with `"id": 3`, and `{ name: "CO2" }` does not match `"co2"`. A
+  notification that does not match is ignored without a message.
+- A path in `fields` that a matching payload lacks is logged once, e.g.
+  `MMM-RingGauge (CO₂): …`; see
+  [Configuration errors](#configuration-errors). Paths name the keys
+  from the top of the payload, separated by dots, with list positions
+  as numbers: `"data.readings.0.value"`.
+- A value that is not a number dims the gauge, as an unavailable
+  reading does. A string holding a number, such as `"21.5"`, counts; one
+  with its unit, such as `"812 ppm"`, needs a
+  [mapping function](#a-value-as-text-with-its-unit).
+
+### MagicMirror² is older than 2.36
+
+MagicMirror² skips the module, and the browser console shows the
+warning `Version is incorrect. Skip module: 'MMM-RingGauge'`; the line
+before it names the minimum and the current version. Update
+MagicMirror² as its documentation describes; the version is in
+`package.json` in the MagicMirror folder.
+
 ## Development
 
 The module has no build step and no dependencies. Run the checks the
@@ -683,6 +754,8 @@ git ls-files '*.js' | xargs -n1 node --check
 pnpm dlx @biomejs/biome@2.6.3 ci .
 node --test "tests/**/*.test.js"
 ```
+
+To contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ### Fake readings
 
@@ -715,44 +788,102 @@ small steps, and now and then come with `available: false`. Every
 | `interval` | `4000` | Time between two ticks, in ms. |
 | `dropEvery` | `24` | Ticks per cycle; the connection drops at the end of each. `0` never drops it. |
 | `dropFor` | `3` | Ticks per cycle without connection. |
+| `fixed` | `{}` | A value per sensor, e.g. `{ co2: 1350 }`, sent at every tick instead of the changing values. |
 
-A group of three rings that read from the mock. Add
+A group of three rings that read from the mock. Add both entries to the
+`modules` array of `config.js`, and
 [WallberryTheme](https://github.com/raywo/WallberryTheme) as its README
 describes, to check them over its background photo:
 
 ```js
-modules: [
-  { module: "MMM-FakeReadings" },
-  {
-    module: "MMM-RingGauge",
-    position: "bottom_center",
-    config: {
-      notification: "FAKE_READING",
-      fields: {
-        value: "value",
-        unit: "unit",
-        quantity: "quantity",
-        available: "available"
-      },
-      connection: {
-        notification: "FAKE_CONNECTION",
-        connected: "connected",
-        graceAfter: 5000
-      },
-      rings: [
-        { match: { sensor: "co2" }, quantity: "carbon_dioxide", unit: "ppm" },
-        { match: { sensor: "humidity" }, quantity: "humidity", unit: "%" },
-        { match: { sensor: "temperature" }, quantity: "temperature", unit: "°C" }
-      ]
-    }
+{ module: "MMM-FakeReadings" },
+{
+  module: "MMM-RingGauge",
+  position: "bottom_center",
+  config: {
+    notification: "FAKE_READING",
+    fields: {
+      value: "value",
+      unit: "unit",
+      quantity: "quantity",
+      available: "available"
+    },
+    connection: {
+      notification: "FAKE_CONNECTION",
+      connected: "connected",
+      graceAfter: 5000
+    },
+    rings: [
+      { match: { sensor: "co2" }, quantity: "carbon_dioxide", unit: "ppm" },
+      { match: { sensor: "humidity" }, quantity: "humidity", unit: "%" },
+      { match: { sensor: "temperature" }, quantity: "temperature", unit: "°C" }
+    ]
   }
-]
+},
 ```
 
 Add `classes: "ring-gauge-panel"` to see them on one pane of glass.
 
 With the defaults, a drop lasts 12 s, so the gauges dim 5 s into it and
 light up again with the next reading.
+
+### Screenshots
+
+The screenshots in `images/` show the mock's fixed values over
+[a photo by Paul Wuthrich on Unsplash](https://unsplash.com/photos/MgCn9JWFmZY),
+with `language: "de"` in `config.js`. To take them again, use these
+two entries: <!-- durable-ok -->
+
+```js
+{
+  module: "MMM-FakeReadings",
+  config: { dropEvery: 0, fixed: { co2: 1350, humidity: 48 } }
+},
+{
+  module: "MMM-RingGauge",
+  position: "middle_center",
+  config: {
+    notification: "FAKE_READING",
+    fields: {
+      value: "value",
+      unit: "unit",
+      quantity: "quantity",
+      available: "available"
+    },
+    rings: [
+      { match: { sensor: "co2" }, quantity: "carbon_dioxide", unit: "ppm" },
+      { match: { sensor: "humidity" }, quantity: "humidity", unit: "%" }
+    ]
+  }
+},
+```
+
+`images/screenshot.png` shows them like this, `images/panel.png` with
+`classes: "ring-gauge-panel"`. Put the photo behind the mirror in
+`config/custom.css`:
+
+```css
+html {
+  background: url("photo.jpg") center / cover no-repeat fixed;
+}
+
+body {
+  background: transparent;
+}
+```
+
+and save it as `config/photo.jpg`. Take each screenshot in a window of
+1200 × 800 at twice the pixel density, cut to the row of rings with
+40 px of photo around it.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
+
+## Support
+
+If the gauges help you keep an eye on your rooms, you can
+[buy me a coffee](https://www.buymeacoffee.com/raywo).
 
 ## License
 

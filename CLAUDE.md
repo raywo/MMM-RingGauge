@@ -79,6 +79,24 @@ and users install by `git clone` only.
 - Give the `pull_request` trigger no branch filter: issue pull requests of
   a run target `run/*` and are merged there only after the checks pass.
 
-## Open
+## Release and module list
 
-- **Open:** a `CHANGELOG.md` and a screenshot for the module list.
+The MagicMirror² module list checks the repository once a day and
+reports every deviation as a hint.
+
+- Keep `LICENSE`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, `biome.json` and
+  `.github/dependabot.yaml`: the list asks for each.
+- Never write `modules: [` in the README; show module entries on their
+  own.
+- End every module entry in the README with `},`.
+- Keep the README sections `## Installation` with
+  `git clone https://github.com/raywo/MMM-RingGauge.git` and `## Update`.
+- Write `node --run`, never npm's run command, and `MagicMirror²` with
+  the superscript, also inside a link text; the list flags the name with
+  a plain 2, with a space, or without ². It checks every file but the
+  changelog, this one too: never quote the flagged spellings here.
+- Keep "screenshot" in the name of `images/screenshot.png` only: the
+  list shows the first image whose name contains it. Take it again as
+  the README section "Screenshots" describes.
+- Add an entry to `CHANGELOG.md` for every change users notice; raise
+  `version` in `package.json` with the release.

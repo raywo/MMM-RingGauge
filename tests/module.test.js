@@ -12,6 +12,21 @@ function read(file) {
 }
 
 /**
+ * Evaluates a README example that shows one module entry as it stands in
+ * the `modules` array of config.js: an object from a line "{" on, ending
+ * with "},". Code above that line, e.g. a helper, runs first.
+ */
+function readmeEntry(block) {
+	const lines = block.trimEnd().split("\n");
+	const start = lines.indexOf("{");
+	assert.ok(start >= 0, "the example has an entry starting with a line \"{\"");
+	assert.equal(lines.at(-1), "},", "the entry ends with a trailing comma");
+	const preamble = lines.slice(0, start).join("\n");
+	const entry = [...lines.slice(start, -1), "}"].join("\n");
+	return vm.runInNewContext(`${preamble}\n(${entry})`);
+}
+
+/**
  * Loads the browser side the way MagicMirror² loads it into the page and
  * returns the definitions passed to `Module.register`, by name.
  */
@@ -383,6 +398,27 @@ describe(MODULE_NAME, () => {
 		assert.equal(requiresVersion, "2.36.0");
 		assert.match(read("README.md"), /MagicMirror² 2\.36\.0 or newer/);
 		assert.match(read("CLAUDE.md"), /MagicMirror² 2\.36\.0/);
+	});
+
+	it("shows module entries in the README that paste into the modules array", () => {
+		const examples = [...read("README.md").matchAll(/```js\n([\s\S]*?)```/g)]
+			.map((match) => match[1])
+			.filter((block) => /^\s*\{?\s*module: "/m.test(block));
+		assert.ok(examples.length >= 10, "the README has its module entries");
+		for (const block of examples) {
+			const lines = block.trimEnd().split("\n");
+			const start = lines.findIndex((line) => line.startsWith("{"));
+			assert.ok(start >= 0, block);
+			assert.equal(lines.at(-1), "},", block);
+			assert.doesNotMatch(block, /modules: \[/);
+			// Code above the first entry, e.g. a helper, stands above the
+			// array in config.js.
+			const preamble = lines.slice(0, start).join("\n");
+			const entries = vm.runInNewContext(`${preamble}\n[\n${lines.slice(start).join("\n")}\n]`);
+			for (const entry of entries) {
+				assert.equal(typeof entry.module, "string", block);
+			}
+		}
 	});
 
 	it("names no source in its code or defaults", () => {
@@ -889,11 +925,7 @@ describe(MODULE_NAME, () => {
 		}
 
 		// The module entries of the section's examples, as config.js holds them.
-		const entries = blocks("js").map((block) =>
-			block.includes("let config")
-				? vm.runInNewContext(`${block}\nconfig.modules[0]`)
-				: vm.runInNewContext(`(${block})`)
-		);
+		const entries = blocks("js").map(readmeEntry);
 
 		it("has the examples this test checks", () => {
 			assert.equal(entries.length, 3);
@@ -1083,7 +1115,7 @@ describe(MODULE_NAME, () => {
 		it("runs the example of the README", () => {
 			const section = read("README.md").split("### Several readings side by side")[1].split("\n### ")[0];
 			const [block] = section.match(/```js\n([\s\S]*?)```/).slice(1);
-			const entry = vm.runInNewContext(`(${block})`);
+			const entry = readmeEntry(block);
 			const {instance, logged} = startInstance(entry.config);
 			const readings = [
 				["co2", 812, "ppm", "carbon_dioxide"],

@@ -37,13 +37,16 @@
   /* Wrapped, fit-content would keep the full limit and leave space
      beside the rings. Rings never shrink, so the widest line holds as
      many rings as fit into the limit: round down to whole rings. At
-     least one ring wide, which then overflows a narrower limit. */
+     least one ring wide, which then overflows a narrower limit.
+     Do not wrap the limit in min(…, 100%): a region sized by its
+     content (top_*, bottom_*) counts a percentage max-width as none,
+     grows to the unwrapped row and stretches its other modules. */
   max-width: max(
     var(--ring-gauge-size),
     calc(
       round(
         down,
-        min(var(--ring-gauge-max-width), 100%) - 2 * var(--ring-gauge-row-padding) + var(--ring-gauge-gap),
+        var(--ring-gauge-max-width) - 2 * var(--ring-gauge-row-padding) + var(--ring-gauge-gap),
         var(--ring-gauge-size) + var(--ring-gauge-gap)
       ) - var(--ring-gauge-gap)
     )

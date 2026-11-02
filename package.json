@@ -19,5 +19,6 @@
     "url": "git+https://github.com/raywo/MMM-RingGauge.git"
   },
   "license": "MIT",
+  "type": "commonjs",
   "author": "Ray Wojciechowski (https://github.com/raywo)"
 }
